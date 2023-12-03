@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
 from model.model_stages import BiSeNet
-from cityscapes import CityScapes
+from dataset.cityscapes import CityScapes
+from dataset.GTAV import GtaV
 import torch
 from torch.utils.data import DataLoader
 import logging 
@@ -13,7 +14,7 @@ import torch.cuda.amp as amp
 from utils import poly_lr_scheduler
 from utils import reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu
 from tqdm import tqdm
-
+ 
 
 logger = logging.getLogger()
 
@@ -132,13 +133,19 @@ def parse_args():
                        type=str,
                        default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
     )
+    parse.add_argument('--dataset',
+                       dest='dataset',
+                       type=str,
+                       default='Cityspaces',
+                       help='Select Dataset between GTAV and Cityspaces'
+    )
 
     parse.add_argument('--mode',
                        dest='mode',
                        type=str,
                        default='train',
     )
-
+ 
     parse.add_argument('--backbone',
                        dest='backbone',
                        type=str,
@@ -227,20 +234,38 @@ def main():
 
     mode = args.mode
     root=args.root
-    train_dataset = CityScapes(mode,root)
-    dataloader_train = DataLoader(train_dataset,
-                    batch_size=args.batch_size,
-                    shuffle=False,
-                    num_workers=args.num_workers,
-                    pin_memory=False,
-                    drop_last=True)
+    if args.dataset == 'GTAV':
+        train_dataset = GtaV(mode,root)
+        dataloader_train = DataLoader(train_dataset,
+                        batch_size=args.batch_size,
+                        shuffle=False,
+                        num_workers=args.num_workers,
+                        pin_memory=False,
+                        drop_last=True)
 
-    val_dataset = CityScapes(root=root,mode='val')
-    dataloader_val = DataLoader(val_dataset,
-                       batch_size=1,
-                       shuffle=False,
-                       num_workers=args.num_workers,
-                       drop_last=True)
+        val_dataset = GtaV(root=root,mode='val')
+        dataloader_val = DataLoader(val_dataset,
+                        batch_size=1,
+                        shuffle=False,
+                        num_workers=args.num_workers,
+                        drop_last=True)
+    else:
+
+
+        train_dataset = CityScapes(mode,root)
+        dataloader_train = DataLoader(train_dataset,
+                        batch_size=args.batch_size,
+                        shuffle=False,
+                        num_workers=args.num_workers,
+                        pin_memory=False,
+                        drop_last=True)
+
+        val_dataset = CityScapes(root=root,mode='val')
+        dataloader_val = DataLoader(val_dataset,
+                        batch_size=1,
+                        shuffle=False,
+                        num_workers=args.num_workers,
+                        drop_last=True)
 
     ## model
     model = BiSeNet(backbone=args.backbone, n_classes=n_classes, pretrain_model=args.pretrain_path, use_conv_last=args.use_conv_last)
