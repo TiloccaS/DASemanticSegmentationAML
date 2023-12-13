@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 from torch.utils.data import Dataset
 from PIL import Image
-
+from utils import one_hot_it_v11,RandomCrop 
 import os
 import os.path
 import sys
@@ -11,18 +11,21 @@ import torchvision
 from torchvision import transforms
 import torch
 import numpy as np
-
-def pil_loader(path):
-    with open(path, 'rb') as f:
-        img = Image.open(f)
-        return img.convert('RGB')
+import json
+import random
 def pil_loader_label(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('L')
+def pil_loader(path):
+    with open(path, 'rb') as f:
+        img = Image.open(f)
+        return img.convert('RGB')
+
+ 
 class CityScapes(Dataset):
     
-    def __init__(self, mode,root):
+    def __init__(self, mode,root, cropsize=(640, 480),randomscale=(0.125, 0.25, 0.375, 0.5, 0.675, 0.75, 0.875, 1.0, 1.25, 1.5)):
         super(CityScapes, self).__init__()
         # TODO
         self.root = os.path.normpath(root)
@@ -32,13 +35,20 @@ class CityScapes(Dataset):
         image_dir = os.path.join(self.root, 'images', mode)
         label_dir = os.path.join(self.root, 'gtFine', mode)
         self.root = os.path.normpath(image_dir)
-        self.transform = transforms.Compose([transforms.Resize(256),      # Resizes short size of the PIL image to 256
-                                             transforms.CenterCrop(224),  # Crops a central square patch of the image
-                                                                   # 224 because torchvision's AlexNet needs a 224x224 input!
-                                                                    # Remember this when applying different transformations, otherwise you get an error
-                                             transforms.ToTensor()])
-
-
+        self.to_tensor = transforms.Compose([
+                         transforms.ToTensor(),
+                         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                         ])
+        self.trans_train = transforms.Compose([
+            RandomCrop(cropsize,np.random.seed(123))
+            ])
+        with open('./dataset/cityscapes_info.json', 'r') as fr:
+            data=json.load(fr)
+        self.map_label={el['id']: el['trainId'] for el in data}
+        for k, v in self.map_label.items():
+            print(k, "-->",v)
+        print(self.map_label)
+        
         for city in os.listdir(image_dir):
             folder_path = os.path.join(image_dir, city)
             if os.path.isdir(folder_path):
@@ -51,7 +61,7 @@ class CityScapes(Dataset):
             folder_path = os.path.join(label_dir, city_label)
             if os.path.isdir(folder_path):
                  for filename in os.listdir(folder_path):
-                    if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    if filename.lower().endswith(('.png', '.jpg', '.jpeg')) and 'color' not in filename.lower():
                         label_path = os.path.join(folder_path, filename)
                         labels_paths.append(label_path)
            
@@ -62,11 +72,21 @@ class CityScapes(Dataset):
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
-        image, label = pil_loader(image_path), pil_loader_label(label_path)
-
-        image=self.transform(image)
-        label = self.transform(label)
+        image,label = pil_loader(image_path),Image.open(label_path)
+        image,label=self.trans_train(image),self.trans_train(label)
+        image=self.to_tensor(image)
+        label = np.array(label).astype(np.int64)[np.newaxis, :]
+        label = self.convert_labels(label)
+        label=torch.from_numpy(label)
         return image, label
+    
+
+    def convert_labels(self, label):
+        for k, v in self.map_label.items():
+            label[label == k] = v
+        return label
+  
+
 
     def __len__(self):
         length = len(self.data) # Provide a way to get the length (number of elements) of the dataset

@@ -148,11 +148,13 @@ class STDCNet813(nn.Module):
             self.init_params()
 
     def init_weight(self, pretrain_model):
-
+        print(pretrain_model)
+        
         state_dict = torch.load(pretrain_model)["state_dict"]
         self_state_dict = self.state_dict()
         for k, v in state_dict.items():
             self_state_dict.update({k: v})
+        print("sto usando la rete pre-trained")
         self.load_state_dict(self_state_dict)
 
     def init_params(self):

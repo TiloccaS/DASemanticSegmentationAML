@@ -1,2 +1,5 @@
 my_env/
 dataset/__pycache__
+runs/
+__pycache__/
+model/__pycache__/
