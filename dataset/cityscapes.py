@@ -45,7 +45,7 @@ class CityScapes(Dataset):
         self.to_tensor_label = transforms.Compose([
                             # other transforms
                              transforms.ToTensor(),
-                            lambda x: x*255
+                             transforms.Normalize(mean=(0,)*1, std=(255,)*1)
                                 ])
         
         for city in os.listdir(image_dir):
