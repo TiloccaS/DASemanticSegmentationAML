@@ -18,11 +18,11 @@ ImageFile.LOAD_TRUNCATED_IMAGES=True
 def pil_loader_label(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
-    return img.convert('L')
+        return img.convert('L')
 def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
-    return img.convert('RGB')
+        return img.convert('RGB')
 class CityScapes(Dataset):
     
     def __init__(self, mode,root, cropsize=(640, 480),randomscale=(0.125, 0.25, 0.375, 0.5, 0.675, 0.75, 0.875, 1.0, 1.25, 1.5)):
