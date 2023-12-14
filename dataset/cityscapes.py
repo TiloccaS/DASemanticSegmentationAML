@@ -39,15 +39,10 @@ class CityScapes(Dataset):
                          transforms.ToTensor(),
                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
                          ])
-        self.trans_train = transforms.Compose([
-            RandomCrop(cropsize,np.random.seed(123))
-            ])
-        with open('./dataset/cityscapes_info.json', 'r') as fr:
-            data=json.load(fr)
-        self.map_label={el['id']: el['trainId'] for el in data}
-        for k, v in self.map_label.items():
-            print(k, "-->",v)
-        print(self.map_label)
+        self.to_tensor_label = transforms.Compose([
+                    transforms.PILToTensor() 
+                ])
+       
         
         for city in os.listdir(image_dir):
             folder_path = os.path.join(image_dir, city)
@@ -72,12 +67,11 @@ class CityScapes(Dataset):
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
-        image,label = pil_loader(image_path),Image.open(label_path)
-        image,label=self.trans_train(image),self.trans_train(label)
-        image=self.to_tensor(image)
-        label = np.array(label).astype(np.int64)[np.newaxis, :]
-        label = self.convert_labels(label)
-        label=torch.from_numpy(label)
+        image,label = pil_loader(image_path),pil_loader_label(label_path)
+
+        image=self.to_tensor(image).float()
+        label=self.to_tensor_label(label).float()
+
         return image, label
     
 
