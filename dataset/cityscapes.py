@@ -43,10 +43,10 @@ class CityScapes(Dataset):
                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
                          ])
         self.to_tensor_label = transforms.Compose([
-                 # other transforms
+                            # other transforms
                              transforms.ToTensor(),
-                             lambda x: x*255
-                        ])
+                            lambda x: x*255
+                                ])
         
         for city in os.listdir(image_dir):
             folder_path = os.path.join(image_dir, city)
