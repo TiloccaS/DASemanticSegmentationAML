@@ -69,8 +69,8 @@ class CityScapes(Dataset):
         label_path=self.data["label_path"].iloc[idx]
         image,label = pil_loader(image_path),pil_loader_label(label_path)
 
-        image=self.to_tensor(image).float()
-        label=self.to_tensor_label(label).float()
+        image=self.to_tensor_label(image)
+        label=self.to_tensor_label(label)
 
         return image, label
     
