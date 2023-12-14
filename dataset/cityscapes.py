@@ -45,7 +45,7 @@ class CityScapes(Dataset):
         self.to_tensor_label = transforms.Compose([
                  # other transforms
                              transforms.ToTensor(),
-                             transforms.Normalize(mean=(0,)*3, std=(255,)*3)
+                             lambda x: x*255
                         ])
         
         for city in os.listdir(image_dir):
@@ -73,8 +73,8 @@ class CityScapes(Dataset):
         label_path=self.data["label_path"].iloc[idx]
         image,label = cv2_loader(image_path),cv2_loader_label(label_path)
 
-        image=self.to_tensor(image).float()
-        label=self.to_tensor_label(label).float()
+        image=self.to_tensor(image)
+        label=self.to_tensor_label(label)
 
         return image, label
     
