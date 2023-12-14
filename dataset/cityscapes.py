@@ -37,7 +37,6 @@ class CityScapes(Dataset):
         self.root = os.path.normpath(image_dir)
         self.to_tensor = transforms.Compose([
                          transforms.ToTensor(),
-                         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
                          ])
         self.to_tensor_label = transforms.Compose([
                     transforms.PILToTensor() 
@@ -69,7 +68,7 @@ class CityScapes(Dataset):
         label_path=self.data["label_path"].iloc[idx]
         image,label = pil_loader(image_path),pil_loader_label(label_path)
 
-        image=self.to_tensor_label(image)
+        image=self.to_tensor(image)
         label=self.to_tensor_label(label)
 
         return image, label
