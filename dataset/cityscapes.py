@@ -13,7 +13,7 @@ import torch
 import numpy as np
 import json
 import random
-import cv2
+#questo lìho aggiunto per un bug
 ImageFile.LOAD_TRUNCATED_IMAGES=True
 def pil_loader_label(path):
     with open(path, 'rb') as f:
@@ -32,12 +32,19 @@ class CityScapes(Dataset):
         self.split = mode
         images_paths = []
         labels_paths = []
+        #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root, 'images', mode)
         label_dir = os.path.join(self.root, 'gtFine', mode)
         self.root = os.path.normpath(image_dir)
+        #questo prende l'immagine dal pil e la trasforma in tensore 
+        #qui ho un dubbio se occorre normalizzare il tensore
         self.to_tensor = transforms.Compose([
                          transforms.ToTensor(),
+                         #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
+                         
                          ])
+        #questo trasforma la label in tensore, is usa un compose diverso perche per la label ci serve in scala [0,255] e non [0,1]
+        #dubbio
         self.to_tensor_label = transforms.Compose([
                     transforms.PILToTensor() 
                 ])
@@ -45,6 +52,7 @@ class CityScapes(Dataset):
         
         for city in os.listdir(image_dir):
             folder_path = os.path.join(image_dir, city)
+            #se andate a vedere come è fatto il dataset è diviso per citta quindi occorre prima spostarci in quella cartella e poi salvare l'immagine
             if os.path.isdir(folder_path):
                  for filename in os.listdir(folder_path):
                     if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
@@ -55,6 +63,7 @@ class CityScapes(Dataset):
             folder_path = os.path.join(label_dir, city_label)
             if os.path.isdir(folder_path):
                  for filename in os.listdir(folder_path):
+                    #check per vedere se la parola colo non è in file name perche a noi interessano solo le immagini in bianco e nero
                     if filename.lower().endswith(('.png', '.jpg', '.jpeg')) and 'color' not in filename.lower():
                         label_path = os.path.join(folder_path, filename)
                         labels_paths.append(label_path)
@@ -74,11 +83,7 @@ class CityScapes(Dataset):
         return image, label
     
 
-    def convert_labels(self, label):
-        for k, v in self.map_label.items():
-            label[label == k] = v
-        return label
-  
+    
 
 
     def __len__(self):

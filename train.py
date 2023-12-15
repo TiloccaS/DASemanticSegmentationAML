@@ -127,19 +127,27 @@ def str2bool(v):
 
 def parse_args():
     parse = argparse.ArgumentParser()
-
+    
+    #questi sono gli argomenti da linea di comando
+    #la maggior parte hanno un valore di default se volete darglielo voi dovete fare
+    #python train.py --batchsize 2 (se per esempio volete modificare la batch size)
+    #ho aggiunto la root che sarebbe la root del dataaset
+    #il default e quella del mio pc, si dovrebbe cambiare
+    
+    
     parse.add_argument('--root',
                        dest='root',
                        type=str,
                        default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
     )
+    #parametro aggiunto per capire se vogliamo usare cityspaces o gta
     parse.add_argument('--dataset',
                        dest='dataset',
                        type=str,
                        default='Cityspaces',
                        help='Select Dataset between GTAV and Cityspaces'
     )
-
+    #per sceglire fra train e validation
     parse.add_argument('--mode',
                        dest='mode',
                        type=str,
