@@ -30,15 +30,20 @@ class GtaV(Dataset):
         self.split = mode
         images_paths = []
         labels_paths = []
+        #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root)
         label_dir = os.path.join(self.root)
         self.root = os.path.normpath(image_dir)
-        self.transform = transforms.Compose([transforms.Resize(256),      # Resizes short size of the PIL image to 256
-                                             transforms.CenterCrop(224),  # Crops a central square patch of the image
-                                                                   # 224 because torchvision's AlexNet needs a 224x224 input!
-                                                                    # Remember this when applying different transformations, otherwise you get an error
-                                             transforms.ToTensor()])
-
+        #questo prende l'immagine dal pil e la trasforma in tensore 
+        #qui ho un dubbio se occorre normalizzare il tensore
+        self.to_tensor = transforms.Compose([
+                         transforms.Resize((512, 1024)),
+                         transforms.ToTensor(),
+                         #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
+                         
+                         ])
+        #questo trasforma la label in tensore, is usa un compose diverso perche per la label ci serve in scala [0,255] e non [0,1]
+        #dubbio
         image_files = os.listdir(os.path.normpath(os.path.join(self.root, 'images')))
 
         image_files.sort()
@@ -64,14 +69,17 @@ class GtaV(Dataset):
         self.data = pd.DataFrame(zip(images_paths, labels_paths), columns=["image_path", "label_path"])
 
 
+
+
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
-        image, label = pil_loader(image_path), pil_loader_label(label_path)
+        image,label = pil_loader(image_path),pil_loader(label_path)
 
-        image=self.transform(image)
-        label = self.transform(label)
-        return image, label
+        image=self.to_tensor(image)
+        label=self.to_tensor(label)
+
+        return image, label   
 
     def __len__(self):
         length = len(self.data) # Provide a way to get the length (number of elements) of the dataset

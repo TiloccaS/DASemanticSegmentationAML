@@ -23,6 +23,14 @@ def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('RGB')
+ 
+def modifica_tensore(tensore):
+    # Crea una maschera per gli elementi > 19 e diversi da 255
+    maschera = (tensore >= 19) & (tensore != 255)
+
+    # Modifica gli elementi che soddisfano la condizione
+    tensore[maschera] = 255
+    return tensore
 class CityScapes(Dataset):
     
     def __init__(self, mode,root, cropsize=(640, 480),randomscale=(0.125, 0.25, 0.375, 0.5, 0.675, 0.75, 0.875, 1.0, 1.25, 1.5)):
@@ -39,6 +47,7 @@ class CityScapes(Dataset):
         #questo prende l'immagine dal pil e la trasforma in tensore 
         #qui ho un dubbio se occorre normalizzare il tensore
         self.to_tensor = transforms.Compose([
+                         transforms.Resize((512, 1024)),
                          transforms.ToTensor(),
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
                          
@@ -46,6 +55,8 @@ class CityScapes(Dataset):
         #questo trasforma la label in tensore, is usa un compose diverso perche per la label ci serve in scala [0,255] e non [0,1]
         #dubbio
         self.to_tensor_label = transforms.Compose([
+                    transforms.Resize((512, 1024)),
+
                     transforms.PILToTensor() 
                 ])
        
@@ -79,7 +90,9 @@ class CityScapes(Dataset):
 
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
-
+        torch.set_printoptions(profile="full")
+        label=modifica_tensore(label)
+        
         return image, label
     
 
