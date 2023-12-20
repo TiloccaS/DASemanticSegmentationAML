@@ -42,6 +42,11 @@ class GtaV(Dataset):
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
                          
                          ])
+        self.to_tensor_label = transforms.Compose([
+                    transforms.Resize((512, 1024)),
+
+                    transforms.PILToTensor() 
+                ])
         #questo trasforma la label in tensore, is usa un compose diverso perche per la label ci serve in scala [0,255] e non [0,1]
         #dubbio
         image_files = os.listdir(os.path.normpath(os.path.join(self.root, 'images')))
@@ -77,7 +82,7 @@ class GtaV(Dataset):
         image,label = pil_loader(image_path),pil_loader(label_path)
 
         image=self.to_tensor(image)
-        label=self.to_tensor(label)
+        label=self.to_tensor_label(label)
 
         return image, label   
 
