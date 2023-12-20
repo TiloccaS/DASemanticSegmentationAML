@@ -82,7 +82,7 @@ class GtaV(Dataset):
         image,label = pil_loader(image_path),Image.open(label_path)
 
         image=self.to_tensor(image)
-        label=self.to_tensor_label(label)
+        label=self.to_tensor(label)
         torch.set_printoptions(profile="full")
         print(label)
         return image, label   
