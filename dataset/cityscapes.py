@@ -18,7 +18,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES=True
 def pil_loader_label(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
-        return img.convert('L')
+        return img
 def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
