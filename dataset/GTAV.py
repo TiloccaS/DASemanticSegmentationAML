@@ -46,7 +46,7 @@ class GtaV(Dataset):
         image_dir = os.path.join(self.root)
         label_dir = os.path.join(self.root)
         self.root = os.path.normpath(image_dir)
-        with open('./dataset/cityscapes_info.json', 'r') as fr:
+        with open('./dataset/gta_info.json', 'r') as fr:
             labels_info = json.load(fr)
         self.lb_map = {el['id']: el['trainId'] for el in labels_info}
         #questo prende l'immagine dal pil e la trasforma in tensore 
@@ -100,7 +100,7 @@ class GtaV(Dataset):
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
         label=self.convert_labels(label)
-        conta_elementi(label)
+        #conta_elementi(label)
 
         return image, label   
 
