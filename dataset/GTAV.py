@@ -107,6 +107,6 @@ class GtaV(Dataset):
         length = len(self.data) # Provide a way to get the length (number of elements) of the dataset
         return length
     def convert_labels(self, label):
-        for k, v in self.lb_map.items():
+        for k, v in self.lb_map:
             label[label == k] = v
         return label
