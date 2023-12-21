@@ -18,7 +18,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES=True
 def pil_loader_label(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
-    return img
+        return img
 def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
@@ -93,7 +93,7 @@ class CityScapes(Dataset):
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
-        image,label = pil_loader(image_path),pil_loader_label(label_path)
+        image,label = pil_loader(image_path),Image.open(label_path)
 
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
