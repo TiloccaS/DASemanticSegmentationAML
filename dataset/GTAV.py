@@ -46,7 +46,7 @@ class GtaV(Dataset):
         image_dir = os.path.join(self.root)
         label_dir = os.path.join(self.root)
         self.root = os.path.normpath(image_dir)
-        self.info = json.load(open('./dataset/info.json', 'r'))
+        self.info = json.load(open('./dataset/gta_info.json', 'r'))
         self.lb_map = self.info['label2train']
         #questo prende l'immagine dal pil e la trasforma in tensore 
         #qui ho un dubbio se occorre normalizzare il tensore
