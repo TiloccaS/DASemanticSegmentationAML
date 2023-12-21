@@ -93,7 +93,7 @@ class CityScapes(Dataset):
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
-        image,label = pil_loader(image_path),pil_loader(label_path)
+        image,label = pil_loader(image_path),Image.open(label_path)
 
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
