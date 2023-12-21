@@ -95,6 +95,7 @@ class GtaV(Dataset):
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
         label=self.convert_labels(label)
+        conta_elementi(label)
 
         return image, label   
 
