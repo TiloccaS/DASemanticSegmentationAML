@@ -21,6 +21,13 @@ def pil_loader_label(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('L')
+def conta_elementi(tensore):
+    # Creazione di un tensore booleano con True per gli elementi che sono maggiori di 19 e diversi da 255
+    condizione = (tensore > 19) & (tensore != 255)
+    
+    # Estrai i valori che soddisfano la condizione
+    valori_soddisfacenti = tensore[condizione]
+    print("ci sono ", len(valori_soddisfacenti))
 class GtaV(Dataset):
     
     def __init__(self, mode,root):
@@ -82,9 +89,9 @@ class GtaV(Dataset):
         image,label = pil_loader(image_path),Image.open(label_path)
 
         image=self.to_tensor(image)
-        label=self.to_tensor(label)
+        label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
-        print(label)
+        conta_elementi(label)
         return image, label   
 
     def __len__(self):
