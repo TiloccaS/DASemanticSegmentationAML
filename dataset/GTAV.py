@@ -28,6 +28,11 @@ def conta_elementi(tensore):
     # Estrai i valori che soddisfano la condizione
     valori_soddisfacenti = tensore[condizione]
     print("ci sono ", len(valori_soddisfacenti), "sbagliati su ", tensore.numel())
+    condizione_ = (tensore <0 ) 
+    
+    # Estrai i valori che soddisfano la condizione
+    valori_soddisfacenti_ = tensore[condizione_]
+    print("ci sono ", len(valori_soddisfacenti_), "minori di 0 su ", tensore.numel())
 class GtaV(Dataset):
     
     def __init__(self, mode,root):
