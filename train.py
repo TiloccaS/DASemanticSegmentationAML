@@ -246,7 +246,7 @@ def main():
         train_dataset = GtaV(mode,root)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
-                        shuffle=False,
+                        shuffle=True,
                         num_workers=args.num_workers,
                         pin_memory=False,
                         drop_last=True)
@@ -263,7 +263,7 @@ def main():
         train_dataset = CityScapes(mode,root)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
-                        shuffle=False,
+                        shuffle=True,
                         num_workers=args.num_workers,
                         pin_memory=False,
                         drop_last=True)
