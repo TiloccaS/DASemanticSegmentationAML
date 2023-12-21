@@ -50,9 +50,13 @@ class GtaV(Dataset):
         self.lb_map = self.info['label2train']
         #questo prende l'immagine dal pil e la trasforma in tensore 
         #qui ho un dubbio se occorre normalizzare il tensore
+            
+        normalizer = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+
         self.to_tensor = transforms.Compose([
                          transforms.Resize((512, 1024)),
                          transforms.ToTensor(),
+                         normalizer 
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
                          
                          ])

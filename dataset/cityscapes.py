@@ -47,6 +47,8 @@ class CityScapes(Dataset):
         self.split = mode
         images_paths = []
         labels_paths = []
+        normalizer = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+
         #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root, 'images', mode)
         label_dir = os.path.join(self.root, 'gtFine', mode)
@@ -56,6 +58,7 @@ class CityScapes(Dataset):
         self.to_tensor = transforms.Compose([
                          transforms.Resize((512, 1024)),
                          transforms.ToTensor(),
+                         normalizer
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
                          
                          ])
