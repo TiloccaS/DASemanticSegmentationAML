@@ -31,6 +31,13 @@ def modifica_tensore(tensore):
     # Modifica gli elementi che soddisfano la condizione
     tensore[maschera] = 255
     return tensore
+def conta_elementi(tensore):
+    # Creazione di un tensore booleano con True per gli elementi che sono maggiori di 19 e diversi da 255
+    condizione = (tensore > 19) & (tensore != 255)
+    
+    # Estrai i valori che soddisfano la condizione
+    valori_soddisfacenti = tensore[condizione]
+    print("ci sono ", len(valori_soddisfacenti), "sbagliati su ", tensore.numel())
 class CityScapes(Dataset):
     
     def __init__(self, mode,root, cropsize=(640, 480),randomscale=(0.125, 0.25, 0.375, 0.5, 0.675, 0.75, 0.875, 1.0, 1.25, 1.5)):
@@ -91,7 +98,7 @@ class CityScapes(Dataset):
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
-        label=modifica_tensore(label)
+        label=conta_elementi(label)
         
         return image, label
     
