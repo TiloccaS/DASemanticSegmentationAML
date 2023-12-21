@@ -99,7 +99,7 @@ class CityScapes(Dataset):
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
         #print(label)
-        conta_elementi(label)
+        label=modifica_tensore(label)
         
         return image, label
     

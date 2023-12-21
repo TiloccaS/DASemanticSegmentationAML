@@ -11,7 +11,7 @@ import torchvision
 from torchvision import transforms
 import torch
 import numpy as np
-
+import json
 
 def pil_loader(path):
     with open(path, 'rb') as f:
@@ -41,6 +41,9 @@ class GtaV(Dataset):
         image_dir = os.path.join(self.root)
         label_dir = os.path.join(self.root)
         self.root = os.path.normpath(image_dir)
+        with open('./cityscapes_info.json', 'r') as fr:
+            labels_info = json.load(fr)
+        self.lb_map = {el['id']: el['trainId'] for el in labels_info}
         #questo prende l'immagine dal pil e la trasforma in tensore 
         #qui ho un dubbio se occorre normalizzare il tensore
         self.to_tensor = transforms.Compose([
@@ -92,9 +95,15 @@ class GtaV(Dataset):
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
         conta_elementi(label)
+        label=self.convert_labels(label)
+        conta_elementi(label)
+
         return image, label   
 
     def __len__(self):
         length = len(self.data) # Provide a way to get the length (number of elements) of the dataset
         return length
-     
+    def convert_labels(self, label):
+        for k, v in self.lb_map.items():
+            label[label == k] = v
+        return label
