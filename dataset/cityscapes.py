@@ -56,7 +56,7 @@ class CityScapes(Dataset):
         #questo prende l'immagine dal pil e la trasforma in tensore 
         #qui ho un dubbio se occorre normalizzare il tensore
         self.to_tensor = transforms.Compose([
-                         transforms.Resize((2048, 1024)),
+                         transforms.Resize((1024, 2048)),
                          transforms.ToTensor(),
                          normalizer
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
@@ -65,7 +65,7 @@ class CityScapes(Dataset):
         #questo trasforma la label in tensore, is usa un compose diverso perche per la label ci serve in scala [0,255] e non [0,1]
         #dubbio
         self.to_tensor_label = transforms.Compose([
-                    transforms.Resize((2048, 1024)),
+                    #transforms.Resize((2048, 1024)),
 
                     transforms.PILToTensor() 
                 ])
