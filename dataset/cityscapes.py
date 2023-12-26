@@ -56,7 +56,6 @@ class CityScapes(Dataset):
         #questo prende l'immagine dal pil e la trasforma in tensore 
         #qui ho un dubbio se occorre normalizzare il tensore
         self.to_tensor = transforms.Compose([
-                         transforms.Resize((1024, 2048)),
                          transforms.ToTensor(),
                          normalizer
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
@@ -96,14 +95,16 @@ class CityScapes(Dataset):
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
-        image,label = pil_loader(image_path),Image.open(label_path)
+        image,label = Image.open(image_path),Image.open(label_path)
+        image=image.resize((512,1024),Image.BILINEAR)
+        label=label.resize((512,1024),Image.NEAREST)
 
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
         #print(label)
         #label=modifica_tensore(label)
-        conta_elementi(label)
+        #conta_elementi(label)
         return image, label
     
 

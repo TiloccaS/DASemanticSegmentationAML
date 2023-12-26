@@ -54,7 +54,7 @@ class GtaV(Dataset):
         normalizer = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
 
         self.to_tensor = transforms.Compose([
-                         transforms.Resize((1024, 1912)),
+                         #transforms.Resize((1024, 1912)),
                          transforms.ToTensor(),
                          normalizer 
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
@@ -98,7 +98,8 @@ class GtaV(Dataset):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
         image,label = pil_loader(image_path),Image.open(label_path)
-
+        image=image.resize((512,1024),Image.BILINEAR)
+        label=label.resize((512,1024),Image.NEAREST)
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
