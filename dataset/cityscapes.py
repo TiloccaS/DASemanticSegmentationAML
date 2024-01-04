@@ -98,7 +98,6 @@ class CityScapes(Dataset):
         image,label = pil_loader(image_path),Image.open(label_path)
         image=image.resize((512,1024),Image.BILINEAR)
         label=label.resize((512,1024),Image.NEAREST)
-
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
         torch.set_printoptions(profile="full")
