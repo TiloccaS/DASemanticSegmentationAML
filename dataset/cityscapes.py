@@ -95,7 +95,7 @@ class CityScapes(Dataset):
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
-        image,label = Image.open(image_path),Image.open(label_path)
+        image,label = pil_loader(image_path),Image.open(label_path)
         image=image.resize((512,1024),Image.BILINEAR)
         label=label.resize((512,1024),Image.NEAREST)
 
