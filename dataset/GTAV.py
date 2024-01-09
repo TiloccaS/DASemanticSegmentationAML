@@ -88,8 +88,10 @@ class GtaV(Dataset):
         for lbl in split_labels:
            labels_paths.append(self.root+'/labels/'+lbl)
            
-
-        self.data = pd.DataFrame(zip(images_paths, labels_paths), columns=["image_path", "label_path"])
+           
+        label_order=sorted(labels_paths)
+        image_order=sorted(images_paths)
+        self.data = pd.DataFrame(zip(image_order, label_order), columns=["image_path", "label_path"])
 
 
 

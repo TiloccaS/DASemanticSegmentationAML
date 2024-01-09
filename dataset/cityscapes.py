@@ -14,7 +14,6 @@ import numpy as np
 import json
 import random
 #questo lìho aggiunto per un bug
-ImageFile.LOAD_TRUNCATED_IMAGES=True
 def pil_loader_label(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
@@ -88,8 +87,9 @@ class CityScapes(Dataset):
                         label_path = os.path.join(folder_path, filename)
                         labels_paths.append(label_path)
            
-
-        self.data = pd.DataFrame(zip(images_paths, labels_paths), columns=["image_path", "label_path"])
+        label_order=sorted(labels_paths)
+        image_order=sorted(images_paths)
+        self.data = pd.DataFrame(zip(image_order, label_order), columns=["image_path", "label_path"])
 
 
     def __getitem__(self, idx):
