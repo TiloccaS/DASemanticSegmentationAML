@@ -15,7 +15,7 @@ from tensorboardX import SummaryWriter
 import torch.cuda.amp as amp
 from utils import poly_lr_scheduler
 from utils import reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu
-from tqdm import tqdm
+from tqdm.auto import tqdm
  
 
 logger = logging.getLogger()
@@ -132,22 +132,27 @@ def adjust_learning_rate_D(args, optimizer, iter):
     if len(optimizer.param_groups) > 1:
         optimizer.param_groups[1]['lr'] = lr * 10
 
-def train_DA(args, model):
+def train_DA(args, model, dataloader_val):
     loss_func = torch.nn.CrossEntropyLoss(ignore_index=255)
+    writer = SummaryWriter(comment=''.format(args.optimizer))
+    #scaler = amp.GradScaler()
+
+    max_miou = 0
+    #step = 0
 
     model_D1 = FCDiscriminator(num_classes=args.num_classes)
     model_D1.train()
-    model_D1.cuda(args.cpu)
+    torch.nn.DataParallel(model_D1).cuda()
 
     model_D2 = FCDiscriminator(num_classes=args.num_classes)
     model_D2.train()
-    model_D2.cuda(args.cpu)
+    torch.nn.DataParallel(model_D2).cuda()
 
     model_D3 = FCDiscriminator(num_classes=args.num_classes)
     model_D3.train()
-    model_D3.cuda(args.cpu)
+    torch.nn.DataParallel(model_D3).cuda()
 
-    source_dataset = GtaV(args.mode, args.root)
+    source_dataset = GtaV('train', args.root_source)
     dataloader_source = DataLoader(source_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -155,7 +160,7 @@ def train_DA(args, model):
                         pin_memory=False,
                         drop_last=True)
     
-    target_dataset = CityScapes(args.mode, args.root)
+    target_dataset = CityScapes('train', args.root_target)
     dataloader_target = DataLoader(target_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -163,10 +168,10 @@ def train_DA(args, model):
                         pin_memory=False,
                         drop_last=True)
     
-    sourceloader_iter = enumerate(dataloader_source)
-    targetloader_iter = enumerate(dataloader_target)
+    sourceloader_iter = iter(dataloader_source)
+    targetloader_iter = iter(dataloader_target)
 
-    optimizer = torch.optim.SGD(model.optim_parameters(args),
+    optimizer = torch.optim.SGD(model.parameters(),
                           lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
     optimizer.zero_grad()
 
@@ -185,7 +190,7 @@ def train_DA(args, model):
     source_label = 0
     target_label = 1
 
-    for iter in range(args.num_epochs):
+    for iter_ in tqdm(range(args.num_epochs)):
 
         loss_seg_value1 = 0
         loss_adv_target_value1 = 0
@@ -200,16 +205,16 @@ def train_DA(args, model):
         loss_D_value3 = 0
 
         optimizer.zero_grad()
-        adjust_learning_rate(args, optimizer, iter)
+        adjust_learning_rate(args, optimizer, iter_)
 
         optimizer_D1.zero_grad()
-        adjust_learning_rate_D(args, optimizer_D1, iter)
+        adjust_learning_rate_D(args, optimizer_D1, iter_)
 
         optimizer_D2.zero_grad()
-        adjust_learning_rate_D(args, optimizer_D2, iter)
+        adjust_learning_rate_D(args, optimizer_D2, iter_)
 
         optimizer_D3.zero_grad()
-        adjust_learning_rate_D(args, optimizer_D3, iter)
+        adjust_learning_rate_D(args, optimizer_D3, iter_)
 
         for sub_i in range(args.iter_size):
 
@@ -227,10 +232,10 @@ def train_DA(args, model):
 
             # train with source
 
-            batch = next(iter(sourceloader_iter))
+            batch = next(sourceloader_iter)
             images, labels= batch
             labels = labels[ :, :, :].long().cuda()
-            images = images.cuda(args.gpu)
+            images = images.cuda()
 
             output, out16, out32 = model(images)
 
@@ -242,41 +247,38 @@ def train_DA(args, model):
             # proper normalization
             loss = loss / args.iter_size
             loss.backward()
-            loss_seg_value1 += loss_seg1.data.cpu().numpy()[0] / args.iter_size
-            loss_seg_value2 += loss_seg2.data.cpu().numpy()[0] / args.iter_size
-            loss_seg_value3 += loss_seg3.data.cpu().numpy()[0] / args.iter_size
+            loss_seg_value1 += loss_seg1.data.cpu().item() / args.iter_size
+            loss_seg_value2 += loss_seg2.data.cpu().item() / args.iter_size
+            loss_seg_value3 += loss_seg3.data.cpu().item() / args.iter_size
 
             # train with target
 
-            batch = next(iter(targetloader_iter))
+            batch = next(targetloader_iter)
             images, labels = batch
             labels = labels[ :, :, :].long().cuda()
-            images = images.cuda(args.gpu)
+            images = images.cuda()
 
-            output, out16, out32 = model(images)
+            output_t, out16_t, out32_t = model(images)
 
-            D_out1 = model_D1(torch.nn.functional.softmax(output))
-            D_out2 = model_D2(torch.nn.functional.softmax(out16))
-            D_out3 = model_D3(torch.nn.functional.softmax(out32))
+            D_out1 = model_D1(torch.nn.functional.softmax(output_t))
+            D_out2 = model_D2(torch.nn.functional.softmax(out16_t))
+            D_out3 = model_D3(torch.nn.functional.softmax(out32_t))
 
             loss_adv_target1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size().fill_(source_label)).cuda(
-                                           args.gpu))
+                                        torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
 
             loss_adv_target2 = bce_loss(D_out2,
-                                        torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda(
-                                            args.gpu))
+                                        torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda())
             
             loss_adv_target3 = bce_loss(D_out3,
-                                        torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda(
-                                            args.gpu))
+                                        torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda())
 
             loss = args.lambda_adv_target1 * loss_adv_target1 + args.lambda_adv_target2 * loss_adv_target2 + args.lambda_adv_target3 * loss_adv_target3
             loss = loss / args.iter_size
             loss.backward()
-            loss_adv_target_value1 += loss_adv_target1.data.cpu().numpy()[0] / args.iter_size
-            loss_adv_target_value2 += loss_adv_target2.data.cpu().numpy()[0] / args.iter_size
-            loss_adv_target_value3 += loss_adv_target3.data.cpu().numpy()[0] / args.iter_size
+            loss_adv_target_value1 += loss_adv_target1.data.cpu().item() / args.iter_size
+            loss_adv_target_value2 += loss_adv_target2.data.cpu().item() / args.iter_size
+            loss_adv_target_value3 += loss_adv_target3.data.cpu().item() / args.iter_size
 
             # train D
 
@@ -291,22 +293,22 @@ def train_DA(args, model):
                 param.requires_grad = True
 
             # train with source
-            pred1 = pred1.detach()
-            pred2 = pred2.detach()
-            pred3 = pred3.detach()
+            pred1 = output.detach()
+            pred2 = out16.detach()
+            pred3 = out32.detach()
 
             D_out1 = model_D1(torch.nn.functional.softmax(pred1))
             D_out2 = model_D2(torch.nn.functional.softmax(pred2))
             D_out3 = model_D3(torch.nn.functional.softmax(pred3))
 
             loss_D1 = bce_loss(D_out1,
-                              torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda(args.gpu))
+                              torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
 
             loss_D2 = bce_loss(D_out2,
-                               torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda(args.gpu))
+                               torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda())
             
             loss_D3 = bce_loss(D_out3,
-                              torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda(args.gpu))
+                              torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
 
             loss_D1 = loss_D1 / args.iter_size / 2
             loss_D2 = loss_D2 / args.iter_size / 2
@@ -316,14 +318,14 @@ def train_DA(args, model):
             loss_D2.backward()
             loss_D3.backward()
 
-            loss_D_value1 += loss_D1.data.cpu().numpy()[0]
-            loss_D_value2 += loss_D2.data.cpu().numpy()[0]
-            loss_D_value3 += loss_D3.data.cpu().numpy()[0]
+            loss_D_value1 += loss_D1.data.cpu().item()
+            loss_D_value2 += loss_D2.data.cpu().item()
+            loss_D_value3 += loss_D3.data.cpu().item()
 
             # train with target
-            pred_target1 = pred_target1.detach()
-            pred_target2 = pred_target2.detach()
-            pred_target3 = pred_target3.detach()
+            pred_target1 = output_t.detach()
+            pred_target2 = out16_t.detach()
+            pred_target3 = out32_t.detach()
 
             D_out1 = model_D1(torch.nn.functional.softmax(pred_target1))
             D_out2 = model_D2(torch.nn.functional.softmax(pred_target2))
@@ -331,13 +333,13 @@ def train_DA(args, model):
             
 
             loss_D1 = bce_loss(D_out1,
-                              torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda(args.gpu))
+                              torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())
 
             loss_D2 = bce_loss(D_out2,
-                               torch.FloatTensor(D_out2.data.size()).fill_(target_label).cuda(args.gpu))
+                               torch.FloatTensor(D_out2.data.size()).fill_(target_label).cuda())
             
             loss_D3 = bce_loss(D_out3,
-                               torch.FloatTensor(D_out2.data.size()).fill_(target_label).cuda(args.gpu))
+                               torch.FloatTensor(D_out2.data.size()).fill_(target_label).cuda())
 
             loss_D1 = loss_D1 / args.iter_size / 2
             loss_D2 = loss_D2 / args.iter_size / 2
@@ -347,33 +349,44 @@ def train_DA(args, model):
             loss_D2.backward()
             loss_D3.backward()
 
-            loss_D_value1 += loss_D1.data.cpu().numpy()[0]
-            loss_D_value2 += loss_D2.data.cpu().numpy()[0]
-            loss_D_value3 += loss_D3.data.cpu().numpy()[0]
+            loss_D_value1 += loss_D1.data.cpu().item()
+            loss_D_value2 += loss_D2.data.cpu().item()
+            loss_D_value3 += loss_D3.data.cpu().item()
 
         optimizer.step()
         optimizer_D1.step()
         optimizer_D2.step()
         optimizer_D3.step()
 
-        print('exp = {}'.format(args.snapshot_dir))
+        print('exp = {}'.format(args.save_model_path))
         print(
         'iter = {0:8d}/{1:8d}, loss_seg1 = {2:.3f} loss_seg2 = {3:.3f} loss_seg3 = {4:.3f} loss_adv1 = {5:.3f}, loss_adv2 = {6:.3f} loss_adv3 = {7:.3f} loss_D1 = {8:.3f} loss_D2 = {9:.3f} loss_D3 = {10:.3f}'.format(
-            iter, args.num_epochs, loss_seg_value1, loss_seg_value2, loss_seg_value3, loss_adv_target_value1, loss_adv_target_value2, loss_adv_target_value3, loss_D_value1, loss_D_value2, loss_D_value3))
+            iter_, args.num_epochs, loss_seg_value1, loss_seg_value2, loss_seg_value3, loss_adv_target_value1, loss_adv_target_value2, loss_adv_target_value3, loss_D_value1, loss_D_value2, loss_D_value3))
 
-        if iter >= args.checkpoint_step - 1:
+        if iter_ % args.checkpoint_step == 0 and iter_ != 0:
             print ('save model ...')
-            torch.save(model.state_dict(), os.path.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '.pth'))
-            torch.save(model_D1.state_dict(), os.path.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D1.pth'))
-            torch.save(model_D2.state_dict(), os.path.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D2.pth'))
+            torch.save(model.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '.pth'))
+            torch.save(model_D1.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '_D1.pth'))
+            torch.save(model_D2.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '_D2.pth'))
+            torch.save(model_D3.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '_D3.pth'))
             break
 
-        if iter % args.save_pred_every == 0 and iter != 0:
+        if iter_ % args.validation_step == 0 and iter_ != 0:
+            precision, miou = val(args, model, dataloader_val)
+            if miou > max_miou:
+                max_miou = miou
+                import os
+                os.makedirs(args.save_model_path, exist_ok=True)
+                torch.save(model.module.state_dict(), os.path.join(args.save_model_path, 'best.pth'))
+            writer.add_scalar('epoch/precision_val', precision, iter_)
+            writer.add_scalar('epoch/miou val', miou, iter_)
+
+        '''if iter % args.save_pred_every == 0 and iter != 0:
             print ('taking snapshot ...')
-            torch.save(model.state_dict(), os.path.join(args.snapshot_dir, 'GTA5_' + str(iter) + '.pth'))
-            torch.save(model_D1.state_dict(), os.path.join(args.snapshot_dir, 'GTA5_' + str(iter) + '_D1.pth'))
-            torch.save(model_D2.state_dict(), os.path.join(args.snapshot_dir, 'GTA5_' + str(iter) + '_D2.pth'))
-            torch.save(model_D2.state_dict(), os.path.join(args.snapshot_dir, 'GTA5_' + str(iter) + '_D3.pth'))
+            torch.save(model.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '.pth'))
+            torch.save(model_D1.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '_D1.pth'))
+            torch.save(model_D2.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '_D2.pth'))
+            torch.save(model_D2.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '_D3.pth'))'''
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -399,18 +412,22 @@ def parse_args():
                        type=str,
                        default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
     )
+    parse.add_argument('--root_source',
+                       dest='root_source',
+                       type=str,
+                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+    )
+    parse.add_argument('--root_target',
+                       dest='root_target',
+                       type=str,
+                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+    )
     #parametro aggiunto per capire se vogliamo usare cityspaces o gta
     parse.add_argument('--dataset',
                        dest='dataset',
                        type=str,
                        default='Cityspaces',
                        help='Select Dataset between GTAV and Cityspaces'
-    )
-    #per sceglire fra train e validation
-    parse.add_argument('--mode',
-                       dest='mode',
-                       type=str,
-                       default='train',
     )
  
     parse.add_argument('--backbone',
@@ -495,7 +512,39 @@ def parse_args():
                        type=int,
                        default=1,
                        help='Accumulate gradients for ITER_SIZE iterations')
-
+    parse.add_argument('--domain_shift',
+                       type=bool,
+                       default=False,
+                       help='To test domain shift from GTAV to Cityscapes')
+    parse.add_argument('--domain_adaptation',
+                       type=bool,
+                       default=False,
+                       help='To train domain adaptation from GTAV to Cityscapes')
+    parse.add_argument('--momentum',
+                       type=float,
+                       default=0.9,
+                       help='Momentum component of the optimiser')
+    parse.add_argument('--weight_decay',
+                       type=float,
+                       default=5e-4,
+                       help='Regularisation parameter for L2-loss')
+    parse.add_argument('--lambda_adv_target1',
+                       type=float,
+                       default=0.0002,
+                       help='lambda_adv for adversarial training')
+    parse.add_argument('--lambda_adv_target2',
+                       type=float,
+                       default=0.001,
+                       help='lambda_adv for adversarial training')
+    parse.add_argument('--lambda_adv_target3',
+                       type=float,
+                       default=0.001,
+                       help='lambda_adv for adversarial training')
+    parse.add_argument('--lambda_seg',
+                       type=float,
+                       default=0.1,
+                       help='lambda_seg')
+    
 
 
     return parse.parse_args()
@@ -507,10 +556,9 @@ def main():
     ## dataset
     n_classes = args.num_classes
 
-    mode = args.mode
     root=args.root
     if args.dataset == 'GTAV':
-        train_dataset = GtaV(mode,root)
+        train_dataset = GtaV('train',root)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -518,7 +566,7 @@ def main():
                         pin_memory=False,
                         drop_last=True)
 
-        val_dataset = GtaV(root=root,mode='val')
+        val_dataset = GtaV(root=root, mode='val')
         dataloader_val = DataLoader(val_dataset,
                         batch_size=1,
                         shuffle=False,
@@ -527,7 +575,7 @@ def main():
     else:
 
 
-        train_dataset = CityScapes(mode,root)
+        train_dataset = CityScapes('train', root)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -561,10 +609,17 @@ def main():
         print('not supported optimizer \n')
         return None
 
-    ## train loop
-    train(args, model, optimizer, dataloader_train, dataloader_val)
+    if args.domain_adaptation:
+        print(True)
+        train_DA(args, model, dataloader_val)
+
+    if not args.domain_shift:
+        ## train loop
+        train(args, model, optimizer, dataloader_train, dataloader_val)
+        
     # final test
-    val(args, model, dataloader_val) 
+    val(args, model, dataloader_val)
+
 
 if __name__ == "__main__":
     import multiprocessing

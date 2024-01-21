@@ -152,7 +152,7 @@ class STDCNet813(nn.Module):
         print(pretrain_model)
         
         state_dict = torch.load(pretrain_model)["state_dict"]
-        print(state_dict.keys())
+        #print(state_dict.keys())
         self_state_dict = self.state_dict()
         for k, v in state_dict.items():
             self_state_dict.update({k: v})
