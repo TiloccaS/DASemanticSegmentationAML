@@ -260,9 +260,9 @@ def train_DA(args, model, dataloader_val):
 
             output_t, out16_t, out32_t = model(images)
 
-            D_out1 = model_D1(torch.nn.functional.softmax(output_t))
-            D_out2 = model_D2(torch.nn.functional.softmax(out16_t))
-            D_out3 = model_D3(torch.nn.functional.softmax(out32_t))
+            D_out1 = model_D1(torch.nn.functional.softmax(output_t,dim=1))
+            D_out2 = model_D2(torch.nn.functional.softmax(out16_t,dim=1))
+            D_out3 = model_D3(torch.nn.functional.softmax(out32_t,dim=1))
 
             loss_adv_target1 = bce_loss(D_out1,
                                         torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
@@ -271,7 +271,7 @@ def train_DA(args, model, dataloader_val):
                                         torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda())
             
             loss_adv_target3 = bce_loss(D_out3,
-                                        torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda())
+                                        torch.FloatTensor(D_out3.data.size()).fill_(source_label).cuda())
 
             loss = args.lambda_adv_target1 * loss_adv_target1 + args.lambda_adv_target2 * loss_adv_target2 + args.lambda_adv_target3 * loss_adv_target3
             loss = loss / args.iter_size
@@ -297,9 +297,9 @@ def train_DA(args, model, dataloader_val):
             pred2 = out16.detach()
             pred3 = out32.detach()
 
-            D_out1 = model_D1(torch.nn.functional.softmax(pred1))
-            D_out2 = model_D2(torch.nn.functional.softmax(pred2))
-            D_out3 = model_D3(torch.nn.functional.softmax(pred3))
+            D_out1 = model_D1(torch.nn.functional.softmax(pred1,dim=1))
+            D_out2 = model_D2(torch.nn.functional.softmax(pred2,dim=1))
+            D_out3 = model_D3(torch.nn.functional.softmax(pred3,dim=1))
 
             loss_D1 = bce_loss(D_out1,
                               torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
@@ -308,7 +308,7 @@ def train_DA(args, model, dataloader_val):
                                torch.FloatTensor(D_out2.data.size()).fill_(source_label).cuda())
             
             loss_D3 = bce_loss(D_out3,
-                              torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
+                              torch.FloatTensor(D_out3.data.size()).fill_(source_label).cuda())
 
             loss_D1 = loss_D1 / args.iter_size / 2
             loss_D2 = loss_D2 / args.iter_size / 2
@@ -327,9 +327,9 @@ def train_DA(args, model, dataloader_val):
             pred_target2 = out16_t.detach()
             pred_target3 = out32_t.detach()
 
-            D_out1 = model_D1(torch.nn.functional.softmax(pred_target1))
-            D_out2 = model_D2(torch.nn.functional.softmax(pred_target2))
-            D_out3 = model_D3(torch.nn.functional.softmax(pred_target3))
+            D_out1 = model_D1(torch.nn.functional.softmax(pred_target1,dim=1))
+            D_out2 = model_D2(torch.nn.functional.softmax(pred_target2,dim=1))
+            D_out3 = model_D3(torch.nn.functional.softmax(pred_target3,dim=1))
             
 
             loss_D1 = bce_loss(D_out1,
@@ -339,7 +339,7 @@ def train_DA(args, model, dataloader_val):
                                torch.FloatTensor(D_out2.data.size()).fill_(target_label).cuda())
             
             loss_D3 = bce_loss(D_out3,
-                               torch.FloatTensor(D_out2.data.size()).fill_(target_label).cuda())
+                               torch.FloatTensor(D_out3.data.size()).fill_(target_label).cuda())
 
             loss_D1 = loss_D1 / args.iter_size / 2
             loss_D2 = loss_D2 / args.iter_size / 2
