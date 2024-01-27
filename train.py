@@ -242,14 +242,15 @@ def train_DA(args, model, dataloader_val):
 
             for param in model_D1.parameters():
                 param.requires_grad = True  
-
+            
+            out32=out32.detach()
             out32_t=out32_t.detach() 
             
 
             with amp.autocast():
                 D_out1=model_D1(torch.nn.functional.softmax(out32,dim=1)) 
                 loss_adv_source1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())
+                                        torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
                 
             scaler.scale(loss_adv_source1).backward()
 
@@ -271,7 +272,7 @@ def train_DA(args, model, dataloader_val):
             
             print('exp = {}'.format(args.save_model_path))
         
-            print('iter = {0:8d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {8:.3f}'.format(epoch, args.num_epochs, loss_segmentation,  loss_adv))
+            print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_segmentation,  loss_adv))
 
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             print ('save model ...')
