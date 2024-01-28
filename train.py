@@ -69,6 +69,7 @@ def train(args, model, optimizer, dataloader_train, dataloader_val):
     loss_func = torch.nn.CrossEntropyLoss(ignore_index=255)
     max_miou = 0
     step = 0
+    
     for epoch in range(args.num_epochs):
         lr = poly_lr_scheduler(optimizer, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
         model.train()
@@ -143,7 +144,6 @@ def train_DA(args, model, dataloader_val):
     lr_D1=args.learning_rate_D
 
     model_D1 = FCDiscriminator(num_classes=args.num_classes)
-    model_D1.train()
     torch.nn.DataParallel(model_D1).cuda()
 
     source_dataset = GtaV('train', args.root_source)
@@ -185,12 +185,13 @@ def train_DA(args, model, dataloader_val):
         loss_seg_value2 = 0
         loss_adv_target_value2 = 0
         loss_D_value2 = 0
-
+        loss_record=[]
+        loss_record_adv=[]
         
 
         lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=args.num_epochs)
         lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=args.num_epochs)
-
+        model.train()
       
         tq = tqdm(total=min(len(dataloader_source),len(dataloader_target))* args.batch_size )
         tq.set_description('epoch %d, lr_segmentation %f, lr_discriminator %f'% (epoch, lr, lr_D1))
@@ -247,7 +248,7 @@ def train_DA(args, model, dataloader_val):
             with amp.autocast():
                 D_out1=model_D1(torch.nn.functional.softmax(out32,dim=1)) 
                 loss_adv_source1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
+                                        torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())/2
                 
             scaler.scale(loss_adv_source1).backward()
 
@@ -255,7 +256,7 @@ def train_DA(args, model, dataloader_val):
 
                 D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())
+                                        torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())/2
 
             scaler.scale(loss_adv_target1).backward()
 
@@ -266,10 +267,11 @@ def train_DA(args, model, dataloader_val):
             loss_G=loss+loss_D1
 
             loss_adv=loss_adv_source1+loss_adv_target1
-            
+            loss_record.append(loss_G)
+            loss_record_adv.append(loss_adv)
             print('exp = {}'.format(args.save_model_path))
         
-            print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G,  loss_adv))
+            print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, float(np.mean(loss_record)),  float(np.mean(loss_adv))))
             tq.update(args.batch_size)
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             print ('save model ...')
