@@ -139,6 +139,8 @@ def train_DA(args, model, dataloader_val):
 
     max_miou = 0
     #step = 0
+    lr=args.learning_rate
+    lr_D1=args.learning_rate_D
 
     model_D1 = FCDiscriminator(num_classes=args.num_classes)
     model_D1.train()
@@ -160,15 +162,12 @@ def train_DA(args, model, dataloader_val):
                         pin_memory=False,
                         drop_last=True)
     
-    sourceloader_iter = iter(dataloader_source)
-    targetloader_iter = iter(dataloader_target)
+   
 
     optimizer = torch.optim.SGD(model.parameters(),
-                          lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
-    optimizer.zero_grad()
+                          lr=lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
-    optimizer_D1 = torch.optim.Adam(model_D1.parameters(), lr=args.learning_rate_D, betas=(0.9, 0.99))
-    optimizer_D1.zero_grad()
+    optimizer_D1 = torch.optim.Adam(model_D1.parameters(), lr=lr_D1, betas=(0.9, 0.99))
 
 
     bce_loss = torch.nn.BCEWithLogitsLoss()
@@ -177,7 +176,7 @@ def train_DA(args, model, dataloader_val):
     source_label = 0
     target_label = 1
 
-    for epoch in tqdm(range(args.num_epochs)):
+    for epoch in range(args.num_epochs):
 
         loss_seg_value1 = 0
         loss_adv_target_value1 = 0
@@ -189,14 +188,12 @@ def train_DA(args, model, dataloader_val):
 
         
 
-        optimizer.zero_grad()
-        adjust_learning_rate(args, optimizer, epoch)
-
-        optimizer_D1.zero_grad()
-        adjust_learning_rate_D(args, optimizer_D1, epoch)
+        lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=args.num_epochs)
+        lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=args.num_epochs)
 
       
-
+        tq = tqdm(total=min(len(dataloader_source),len(dataloader_target))* args.batch_size )
+        tq.set_description('epoch %d, lr_segmentation %f, lr_discriminator %f'% (epoch, lr, lr_D1))
         for i, (source_data, target_data) in enumerate(zip(dataloader_source,dataloader_target)):
 
             # train G
@@ -233,7 +230,7 @@ def train_DA(args, model, dataloader_val):
 
                 D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())
+                                        torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
             
                 loss_D1=loss_adv_target1*args.lambda_adv_target1
             # proper normalization
@@ -266,14 +263,14 @@ def train_DA(args, model, dataloader_val):
             scaler.step(optimizer_D1)
             scaler.update()
 
-            loss_segmentation=loss+loss_D1
+            loss_G=loss+loss_D1
 
             loss_adv=loss_adv_source1+loss_adv_target1
             
             print('exp = {}'.format(args.save_model_path))
         
-            print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_segmentation,  loss_adv))
-
+            print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G,  loss_adv))
+            tq.update(args.batch_size)
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             print ('save model ...')
             torch.save(model.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '.pth'))
