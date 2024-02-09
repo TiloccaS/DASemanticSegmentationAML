@@ -454,6 +454,10 @@ def parse_args():
                        type=float,
                        default=0.1,
                        help='lambda_seg')
+    parse.add_argument('--aug_type',
+                       type=str,
+                       default=None,
+                       help='type of Data Augmentation to apply')
     
 
 
@@ -466,9 +470,10 @@ def main():
     ## dataset
     n_classes = args.num_classes
 
-    root=args.root
+    root = args.root
+    aug_type = args.aug_type
     if args.dataset == 'GTAV':
-        train_dataset = GtaV('train',root)
+        train_dataset = GtaV('train', root, aug_type)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -476,7 +481,7 @@ def main():
                         pin_memory=False,
                         drop_last=True)
 
-        val_dataset = GtaV(root=root, mode='val')
+        val_dataset = GtaV(root=root, mode='val', aug_type=None)
         dataloader_val = DataLoader(val_dataset,
                         batch_size=1,
                         shuffle=False,
