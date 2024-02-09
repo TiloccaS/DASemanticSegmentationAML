@@ -33,6 +33,7 @@ class ConvBNReLU(nn.Module):
         return x
 
     def init_weight(self):
+        print(self.state_dict().keys())
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
@@ -52,6 +53,7 @@ class BiSeNetOutput(nn.Module):
         return x
 
     def init_weight(self):
+        print(self.state_dict().keys())
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
@@ -90,6 +92,7 @@ class AttentionRefinementModule(nn.Module):
         return out
 
     def init_weight(self):
+        print(self.state_dict().keys())
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
@@ -110,8 +113,10 @@ class ContextPath(nn.Module):
         self.conv_head16 = ConvBNReLU(128, 128, ks=3, stride=1, padding=1)
         self.conv_avg = ConvBNReLU(inplanes, 128, ks=1, stride=1, padding=0)
 
-
+     
         self.init_weight()
+     
+
 
     def forward(self, x):
         H0, W0 = x.size()[2:]
@@ -139,10 +144,13 @@ class ContextPath(nn.Module):
         return feat2, feat4, feat8, feat16, feat16_up, feat32_up  # x8, x16
 
     def init_weight(self):
+        print(" line 145")
+        print(self.state_dict().keys())
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
                 if not ly.bias is None: nn.init.constant_(ly.bias, 0)
+    
 
     def get_params(self):
         wd_params, nowd_params = [], []
@@ -189,6 +197,8 @@ class FeatureFusionModule(nn.Module):
         return feat_out
 
     def init_weight(self):
+        print("line 197")
+        print(self.state_dict().keys())
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
@@ -226,8 +236,11 @@ class BiSeNet(nn.Module):
         self.conv_out = BiSeNetOutput(256, 256, n_classes)
         self.conv_out16 = BiSeNetOutput(conv_out_inplanes, 64, n_classes)
         self.conv_out32 = BiSeNetOutput(conv_out_inplanes, 64, n_classes)
+        if  "best" not in pretrain_model:
+            self.init_weight()
+        else:
+            self.load_weight(pretrain_model)
 
-        self.init_weight()
 
     def forward(self, x):
         H, W = x.size()[2:]
@@ -245,13 +258,25 @@ class BiSeNet(nn.Module):
         feat_out32 = F.interpolate(feat_out32, (H, W), mode='bilinear', align_corners=True)
 
         return feat_out, feat_out16, feat_out32
+    
+    
 
     def init_weight(self):
+        print(self.state_dict().keys())
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
                 if not ly.bias is None: nn.init.constant_(ly.bias, 0)
-
+    def load_weight(self, pretrain_model):
+            print(pretrain_model)
+            
+            state_dict = torch.load(pretrain_model)
+            #print(state_dict.keys())
+            self_state_dict = self.state_dict()
+            for k, v in state_dict.items():
+                self_state_dict.update({k: v})
+            print("sto usando la rete pre-trained")
+            self.load_state_dict(self_state_dict)
     def get_params(self):
         wd_params, nowd_params, lr_mul_wd_params, lr_mul_nowd_params = [], [], [], []
         for name, child in self.named_children():
