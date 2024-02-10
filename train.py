@@ -138,7 +138,7 @@ def train_DA(args, model, dataloader_val):
     scaler = amp.GradScaler()
 
     max_miou = 0
-    #step = 0
+    step = 0
     lr=args.learning_rate
     lr_D1=args.learning_rate_D
 
@@ -146,7 +146,7 @@ def train_DA(args, model, dataloader_val):
     #model_D1.train()
     torch.nn.DataParallel(model_D1).cuda()
 
-    source_dataset = GtaV('train', args.root_source)
+    source_dataset = GtaV('train', args.root_source, args.aug_type)
     dataloader_source = DataLoader(source_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -185,8 +185,6 @@ def train_DA(args, model, dataloader_val):
         loss_seg_value2 = 0
         loss_adv_target_value2 = 0
         loss_D_value2 = 0
-
-        
 
         lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=args.num_epochs)
         lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=args.num_epochs)
@@ -266,14 +264,20 @@ def train_DA(args, model, dataloader_val):
             scaler.step(optimizer_D1)
             scaler.update()
 
-            loss_G=loss+loss_D1
-
-            loss_adv=loss_adv_source1+loss_adv_target1
+            loss_G = loss + loss_D1
+            loss_adv = loss_adv_source1 + loss_adv_target1
+            
             tq.update(args.batch_size)
+            tq.set_postfix(loss='%.6f' % loss, loss_G='%.6f' % loss_G, loss_adv='%.6f' % loss_adv)
+
+            step += 1
+            writer.add_scalar('loss_step', loss, step)
+            writer.add_scalar('loss_G', loss_G, step)
+            writer.add_scalar('loss_adv', loss_adv, step)
 
         print('exp = {}'.format(args.save_model_path))
         
-        print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G,  loss_adv))
+        print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G, loss_adv))
         tq.close()
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             print ('save model ...')
