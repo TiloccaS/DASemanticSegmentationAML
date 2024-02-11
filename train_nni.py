@@ -1,25 +1,24 @@
-#!/usr/bin/python
-# -*- encoding: utf-8 -*-
-from model.model_stages import BiSeNet
-from dataset.cityscapes import CityScapes
-from dataset.GTAV import GtaV
-from model.discriminator import FCDiscriminator
 import torch
 from torch.utils.data import DataLoader
-import os
-import logging 
+from model.model_stages import BiSeNet
 import argparse
 import numpy as np
-import tensorboardX
+import pandas as pd
+import time
 from tensorboardX import SummaryWriter
+import torch
+import argparse
+import nni
+from nni.experiment import Experiment
+from torch import nn
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+from dataset.cityscapes import CityScapes
+from dataset.GTAV import GtaV
 import torch.cuda.amp as amp
-from utils import poly_lr_scheduler
-from utils import reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu
+from model.discriminator import FCDiscriminator
+from utils import poly_lr_scheduler, reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu
 from tqdm.auto import tqdm
- 
-
-logger = logging.getLogger()
-
 
 def val(args, model, dataloader):
     print('start val!')
@@ -60,94 +59,22 @@ def val(args, model, dataloader):
 
         return precision, miou
 
-
-def train(args, model, optimizer, dataloader_train, dataloader_val):
-    writer = SummaryWriter(comment=''.format(args.optimizer))
-
-    scaler = amp.GradScaler()
-
-    loss_func = torch.nn.CrossEntropyLoss(ignore_index=255)
-    max_miou = 0
-    step = 0
-    for epoch in range(args.num_epochs):
-        lr = poly_lr_scheduler(optimizer, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
-        model.train()
-        tq = tqdm(total=len(dataloader_train)* args.batch_size )
-        tq.set_description('epoch %d, lr %f' % (epoch, lr))
-        loss_record = []
-        for i, (data, label) in enumerate(dataloader_train):
-            data = data.cuda()
-
-            label = label[ :, :, :].long().cuda()
-            optimizer.zero_grad()
-
-            with amp.autocast():
-                output, out16, out32 = model(data)
-
-                loss1 = loss_func(output, label.squeeze(1))
-                loss2 = loss_func(out16, label.squeeze(1))
-                loss3 = loss_func(out32, label.squeeze(1))
-                loss = loss1 + loss2 + loss3
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-
-            tq.update(args.batch_size)
-            tq.set_postfix(loss='%.6f' % loss)
-            step += 1
-            writer.add_scalar('loss_step', loss, step)
-            loss_record.append(loss.item())
-        tq.close()
-        loss_train_mean = np.mean(loss_record)
-        writer.add_scalar('epoch/loss_epoch_train', float(loss_train_mean), epoch)
-        print('loss for train : %f' % (loss_train_mean))
-        if epoch % args.checkpoint_step == 0 and epoch != 0:
-            import os
-            if not os.path.isdir(args.save_model_path):
-                os.mkdir(args.save_model_path)
-            torch.save(model.module.state_dict(), os.path.join(args.save_model_path, 'latest.pth'))
-
-        if epoch % args.validation_step == 0 and epoch != 0:
-            precision, miou = val(args, model, dataloader_val)
-            if miou > max_miou:
-                max_miou = miou
-                import os
-                os.makedirs(args.save_model_path, exist_ok=True)
-                torch.save(model.module.state_dict(), os.path.join(args.save_model_path, 'best.pth'))
-            writer.add_scalar('epoch/precision_val', precision, epoch)
-            writer.add_scalar('epoch/miou val', miou, epoch)
-
-
-def adjust_learning_rate(args, optimizer, iter):
-    lr = poly_lr_scheduler(optimizer, args.learning_rate, iter)
-    optimizer.param_groups[0]['lr'] = lr
-    if len(optimizer.param_groups) > 1:
-        optimizer.param_groups[1]['lr'] = lr * 10
-
-
-def adjust_learning_rate_D(args, optimizer, iter):
-    lr = poly_lr_scheduler(optimizer, args.learning_rate_D, iter)
-    optimizer.param_groups[0]['lr'] = lr
-    if len(optimizer.param_groups) > 1:
-        optimizer.param_groups[1]['lr'] = lr * 10
-
-def train_DA(args, model, dataloader_val):
+def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_rate_D, num_epochs, lambda_adv_target1, weight_decay):
     loss_func = torch.nn.CrossEntropyLoss(ignore_index=255)
     writer = SummaryWriter(comment=''.format(args.optimizer))
     scaler = amp.GradScaler()
 
     max_miou = 0
     step = 0
-    lr=args.learning_rate
-    lr_D1=args.learning_rate_D
+    lr= learning_rate
+    lr_D1= learning_rate_D
 
     model_D1 = FCDiscriminator(num_classes=args.num_classes)
     model_D1=torch.nn.DataParallel(model_D1).cuda()
 
     source_dataset = GtaV('train', args.root_source, args.aug_type,args.crop_height,args.crop_width)
     dataloader_source = DataLoader(source_dataset,
-                        batch_size=args.batch_size,
+                        batch_size=batch_size,
                         shuffle=True,
                         num_workers=args.num_workers,
                         pin_memory=False,
@@ -155,7 +82,7 @@ def train_DA(args, model, dataloader_val):
     
     target_dataset = CityScapes('train', args.root_target,args.crop_height,args.crop_width)
     dataloader_target = DataLoader(target_dataset,
-                        batch_size=args.batch_size,
+                        batch_size=batch_size,
                         shuffle=True,
                         num_workers=args.num_workers,
                         pin_memory=False,
@@ -164,7 +91,7 @@ def train_DA(args, model, dataloader_val):
    
 
     optimizer = torch.optim.SGD(model.parameters(),
-                          lr=lr, momentum=args.momentum, weight_decay=args.weight_decay)
+                          lr=lr, momentum=args.momentum, weight_decay=weight_decay)
 
     optimizer_D1 = torch.optim.Adam(model_D1.parameters(), lr=lr_D1, betas=(0.9, 0.99))
 
@@ -175,14 +102,14 @@ def train_DA(args, model, dataloader_val):
     source_label = 0
     target_label = 1
 
-    for epoch in range(args.num_epochs):
+    for epoch in range(num_epochs):
 
-        lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=args.num_epochs)
-        lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=args.num_epochs)
+        lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=num_epochs)
+        lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=num_epochs)
         model.train()
         model_D1.train()
       
-        tq = tqdm(total=min(len(dataloader_source),len(dataloader_target))* args.batch_size )
+        tq = tqdm(total=min(len(dataloader_source),len(dataloader_target))* batch_size )
         tq.set_description('epoch %d, lr_segmentation %f, lr_discriminator %f'% (epoch, lr, lr_D1))
         for i, (source_data, target_data) in enumerate(zip(dataloader_source,dataloader_target)):
 
@@ -192,8 +119,6 @@ def train_DA(args, model, dataloader_val):
             for param in model_D1.parameters():
                 param.requires_grad = False
 
-
-         
 
             # train with source
 
@@ -224,7 +149,7 @@ def train_DA(args, model, dataloader_val):
                 loss_adv_target1 = bce_loss(D_out1,
                                         torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
             
-                loss_D1=loss_adv_target1*args.lambda_adv_target1
+                loss_D1=loss_adv_target1*lambda_adv_target1
             # proper normalization
             scaler.scale(loss_D1).backward()
 
@@ -258,7 +183,7 @@ def train_DA(args, model, dataloader_val):
             loss_G = loss + loss_D1
             loss_adv = loss_adv_source1 + loss_adv_target1
             
-            tq.update(args.batch_size)
+            tq.update(batch_size)
             tq.set_postfix(loss='%.6f' % loss, loss_G='%.6f' % loss_G, loss_adv='%.6f' % loss_adv)
 
             step += 1
@@ -268,7 +193,7 @@ def train_DA(args, model, dataloader_val):
 
         print('exp = {}'.format(args.save_model_path))
         
-        print('iter = {0:1d}/{1}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G, loss_adv))
+        print('iter = {0:1d}/{1}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, num_epochs, loss_G, loss_adv))
         tq.close()
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             print ('save model ...')
@@ -285,26 +210,11 @@ def train_DA(args, model, dataloader_val):
                 torch.save(model.module.state_dict(), os.path.join(args.save_model_path, 'best.pth'))
             writer.add_scalar('epoch/precision_val', precision, epoch)
             writer.add_scalar('epoch/miou val', miou, epoch)
+            nni.report_intermediate_result(miou)
+    nni.report_final_result(max_miou)
 
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Unsupported value encountered.')
-
-
-def parse_args():
+if __name__ == '__main__':
     parse = argparse.ArgumentParser()
-    
-    #questi sono gli argomenti da linea di comando
-    #la maggior parte hanno un valore di default se volete darglielo voi dovete fare
-    #python train.py --batchsize 2 (se per esempio volete modificare la batch size)
-    #ho aggiunto la root che sarebbe la root del dataaset
-    #il default e quella del mio pc, si dovrebbe cambiare
-    
-    
     parse.add_argument('--root',
                        dest='root',
                        type=str,
@@ -343,9 +253,6 @@ def parse_args():
                        type=str2bool,
                        default=False,
     )
-    parse.add_argument('--num_epochs',
-                       type=int, default=300,
-                       help='Number of epochs to train for')
     parse.add_argument('--epoch_start_i',
                        type=int,
                        default=0,
@@ -366,18 +273,6 @@ def parse_args():
                        type=int,
                        default=1024,
                        help='Width of cropped/resized input image to modelwork')
-    parse.add_argument('--batch_size',
-                       type=int,
-                       default=2,
-                       help='Number of images in each batch')
-    parse.add_argument('--learning_rate',
-                        type=float,
-                        default=0.01,
-                        help='learning rate used for train')
-    parse.add_argument('--learning_rate_D',
-                       type=float,
-                       default=1e-4,
-                       help='learning rate used for discriminator')
     parse.add_argument('--num_workers',
                        type=int,
                        default=0,
@@ -422,64 +317,24 @@ def parse_args():
                        type=float,
                        default=0.9,
                        help='Momentum component of the optimiser')
-    parse.add_argument('--weight_decay',
-                       type=float,
-                       default=5e-4,
-                       help='Regularisation parameter for L2-loss')
-    parse.add_argument('--lambda_adv_target1',
-                       type=float,
-                       default=0.0002,
-                       help='lambda_adv for adversarial training')
     parse.add_argument('--aug_type',
                        type=str,
                        default=None,
                        help='type of Data Augmentation to apply')
     
-
-
-    return parse.parse_args()
-
-
-def main():
-    args = parse_args()
-
+    args = parse.parse_args()
     ## dataset
     n_classes = args.num_classes
 
-    root = args.root
+    root = parse.args.root
     aug_type = args.aug_type
-    if args.dataset == 'GTAV':
-        train_dataset = GtaV('train', root, aug_type,args.crop_height,args.crop_width)
-        dataloader_train = DataLoader(train_dataset,
-                        batch_size=args.batch_size,
-                        shuffle=True,
-                        num_workers=args.num_workers,
-                        pin_memory=False,
-                        drop_last=True)
 
-        val_dataset = GtaV(root=root, mode='val', aug_type=aug_type,height=args.crop_height,width=args.crop_width)
-        dataloader_val = DataLoader(val_dataset,
-                        batch_size=1,
-                        shuffle=False,
-                        num_workers=args.num_workers,
-                        drop_last=True)
-    else:
-
-
-        train_dataset = CityScapes('train', root,args.crop_height,args.crop_width)
-        dataloader_train = DataLoader(train_dataset,
-                        batch_size=args.batch_size,
-                        shuffle=True,
-                        num_workers=args.num_workers,
-                        pin_memory=False,
-                        drop_last=True)
-
-        val_dataset = CityScapes(root=root,mode='val',height=args.crop_height,width=args.crop_width)
-        dataloader_val = DataLoader(val_dataset,
-                        batch_size=1,
-                        shuffle=False,
-                        num_workers=args.num_workers,
-                        drop_last=True)
+    val_dataset = CityScapes(root=root,mode='val',height=args.crop_height,width=args.crop_width)
+    dataloader_val = DataLoader(val_dataset,
+                    batch_size=1,
+                    shuffle=False,
+                    num_workers=args.num_workers,
+                    drop_last=True)
 
     ## model
     model = BiSeNet(backbone=args.backbone, n_classes=n_classes, pretrain_model=args.pretrain_path, use_conv_last=args.use_conv_last)
@@ -488,31 +343,7 @@ def main():
         model = torch.nn.DataParallel(model).cuda()
         print("sto usando la GPU")
 
-    ## optimizer
-    # build optimizer
-    if args.optimizer == 'rmsprop':
-        optimizer = torch.optim.RMSprop(model.parameters(), args.learning_rate)
-    elif args.optimizer == 'sgd':
-        optimizer = torch.optim.SGD(model.parameters(), args.learning_rate, momentum=0.9, weight_decay=1e-4)
-    elif args.optimizer == 'adam':
-        optimizer = torch.optim.Adam(model.parameters(), args.learning_rate)
-    else:  # rmsprop
-        print('not supported optimizer \n')
-        return None
-
     if args.domain_adaptation:
         print(True)
         train_DA(args, model, dataloader_val)
 
-    if not args.domain_shift:
-        ## train loop
-        train(args, model, optimizer, dataloader_train, dataloader_val)
-        
-    # final test
-    val(args, model, dataloader_val)
-
-
-if __name__ == "__main__":
-    import multiprocessing
-    multiprocessing.set_start_method('spawn')
-    main()
