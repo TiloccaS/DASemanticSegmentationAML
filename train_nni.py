@@ -214,6 +214,7 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
     nni.report_final_result(max_miou)
 
 if __name__ == '__main__':
+    print("partito")
     parse = argparse.ArgumentParser()
     parse.add_argument('--root',
                        dest='root',

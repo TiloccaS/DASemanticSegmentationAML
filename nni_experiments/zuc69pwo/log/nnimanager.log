@@ -1,5 +1,0 @@
-[2024-02-11 15:14:18] INFO (main) Start NNI manager
-[2024-02-11 15:14:18] INFO (RestServer) Starting REST server at port 8074, URL prefix: "/"
-[2024-02-11 15:14:18] INFO (RestServer) REST server started.
-[2024-02-11 15:14:18] WARNING (NNITensorboardManager) Tensorboard may not installed, if you want to use tensorboard, please check if tensorboard installed.
-[2024-02-11 15:14:19] INFO (NNIDataStore) Datastore initialization done

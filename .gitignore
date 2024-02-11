@@ -4,3 +4,4 @@ runs/
 __pycache__/
 model/__pycache__/
 dataset/__pycache__/
+my_env_temporaneo/

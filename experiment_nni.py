@@ -134,20 +134,24 @@ if __name__== "__main__":
         " --save_model_path "+args.save_model_path+" --optimizer "+args.optimizer+" --loss "+args.loss + "--iter_size"+str(args.iter_size)+\
         " --domain_shift "+str(args.domain_shift)+" --domain_adaptation "+str(args.domain_adaptation)+" --momentum "+str(args.momentum) 
         
-    
+    print("ciao")
     experiment.config.trial_code_directory = "./" #'./sbonito'
     #experiment.config.trial_gpu_number=1
     #experiment.config.use_active_gpu=True
 
-    experiment.config.experiment_working_directory="./nni_experiments" #'./sbonito/nni-experiments'
+    experiment.config.experiment_working_directory="./nni_experiments_3" #'./sbonito/nni-experiments'
 
     experiment.config.max_trial_number = 10
     experiment.config.trial_concurrency = 1
 
-    #experiment.config.max_experiment_duration = '5m'
+    experiment.config.max_experiment_duration = '1h'
 
-    for port in range(8080,8081):
+ 
+
+    for port in range(8030,8090):
         try:
+            print(port)
+
             experiment.run(port)
             sys.exit(0)
         except:
