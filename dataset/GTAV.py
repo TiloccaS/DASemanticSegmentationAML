@@ -13,36 +13,19 @@ from torchvision.transforms import v2
 import torch
 import numpy as np
 import json
+from dataset.utils import pil_loader
 
-def pil_loader(path):
-    with open(path, 'rb') as f:
-        img = Image.open(f)
-        return img.convert('RGB')
-def pil_loader_label(path):
-    with open(path, 'rb') as f:
-        img = Image.open(f)
-        return img.convert('L')
-def conta_elementi(tensore):
-    # Creazione di un tensore booleano con True per gli elementi che sono maggiori di 19 e diversi da 255
-    condizione = (tensore > 19) & (tensore != 255)
-    
-    # Estrai i valori che soddisfano la condizione
-    valori_soddisfacenti = tensore[condizione]
-    print("ci sono ", len(valori_soddisfacenti), "sbagliati su ", tensore.numel())
-    condizione_ = (tensore <0 ) 
-    
-    # Estrai i valori che soddisfano la condizione
-    valori_soddisfacenti_ = tensore[condizione_]
-    print("ci sono ", len(valori_soddisfacenti_), "minori di 0 su ", tensore.numel())
+
 class GtaV(Dataset):
     
-    def __init__(self, mode, root, aug_type):
+    def __init__(self, mode, root, aug_type,height,width):
         super(GtaV, self).__init__()
         # TODO
         self.root = os.path.normpath(root)
         self.split = mode
         images_paths = []
         labels_paths = []
+        self.resize=(height,width)
         #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root)
         label_dir = os.path.join(self.root)
@@ -83,15 +66,7 @@ class GtaV(Dataset):
                     normalizer
             ])
 
-        '''self.to_tensor = transforms.Compose([
-                         #transforms.Resize((1024, 1912)),
-                         transforms.transforms.
-                         transforms.ToTensor(),
-                         normalizer 
-                         #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
-                         
-                         ])'''
-
+     
         self.to_tensor_label = transforms.Compose([
                     #transforms.Resize((1024, 1024)),
 
@@ -132,14 +107,11 @@ class GtaV(Dataset):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
         image,label = pil_loader(image_path),Image.open(label_path)
-        image=image.resize((512,1024),Image.BILINEAR)
-        label=label.resize((512,1024),Image.NEAREST)
+        image=image.resize(self.resize,Image.BILINEAR)
+        label=label.resize(self.resize,Image.NEAREST)
         image=self.aug_pipeline(image)
         label=self.to_tensor_label(label)
-        torch.set_printoptions(profile="full")
         label=self.convert_labels(label)
-        #conta_elementi(label)
-
         return image, label   
 
     def __len__(self):

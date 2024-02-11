@@ -143,10 +143,9 @@ def train_DA(args, model, dataloader_val):
     lr_D1=args.learning_rate_D
 
     model_D1 = FCDiscriminator(num_classes=args.num_classes)
-    #model_D1.train()
-    torch.nn.DataParallel(model_D1).cuda()
+    model_D1=torch.nn.DataParallel(model_D1).cuda()
 
-    source_dataset = GtaV('train', args.root_source, args.aug_type)
+    source_dataset = GtaV('train', args.root_source, args.aug_type,args.crop_height,args.crop_width)
     dataloader_source = DataLoader(source_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -154,7 +153,7 @@ def train_DA(args, model, dataloader_val):
                         pin_memory=False,
                         drop_last=True)
     
-    target_dataset = CityScapes('train', args.root_target)
+    target_dataset = CityScapes('train', args.root_target,args.crop_height,args.crop_width)
     dataloader_target = DataLoader(target_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -177,14 +176,6 @@ def train_DA(args, model, dataloader_val):
     target_label = 1
 
     for epoch in range(args.num_epochs):
-
-        loss_seg_value1 = 0
-        loss_adv_target_value1 = 0
-        loss_D_value1 = 0
-
-        loss_seg_value2 = 0
-        loss_adv_target_value2 = 0
-        loss_D_value2 = 0
 
         lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=args.num_epochs)
         lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=args.num_epochs)
@@ -277,7 +268,7 @@ def train_DA(args, model, dataloader_val):
 
         print('exp = {}'.format(args.save_model_path))
         
-        print('iter = {0:1d}/{1:8d}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G, loss_adv))
+        print('iter = {0:1d}/{1}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G, loss_adv))
         tq.close()
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             print ('save model ...')
@@ -294,13 +285,6 @@ def train_DA(args, model, dataloader_val):
                 torch.save(model.module.state_dict(), os.path.join(args.save_model_path, 'best.pth'))
             writer.add_scalar('epoch/precision_val', precision, epoch)
             writer.add_scalar('epoch/miou val', miou, epoch)
-
-        '''if iter % args.save_pred_every == 0 and iter != 0:
-            print ('taking snapshot ...')
-            torch.save(model.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '.pth'))
-            torch.save(model_D1.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '_D1.pth'))
-            torch.save(model_D2.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '_D2.pth'))
-            torch.save(model_D2.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(iter) + '_D3.pth'))'''
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -392,7 +376,7 @@ def parse_args():
                         help='learning rate used for train')
     parse.add_argument('--learning_rate_D',
                        type=float,
-                       default=0.01,
+                       default=1e-4,
                        help='learning rate used for discriminator')
     parse.add_argument('--num_workers',
                        type=int,
@@ -477,7 +461,7 @@ def main():
     root = args.root
     aug_type = args.aug_type
     if args.dataset == 'GTAV':
-        train_dataset = GtaV('train', root, aug_type)
+        train_dataset = GtaV('train', root, aug_type,args.crop_height,args.crop_width)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -485,7 +469,7 @@ def main():
                         pin_memory=False,
                         drop_last=True)
 
-        val_dataset = GtaV(root=root, mode='val', aug_type=None)
+        val_dataset = GtaV(root=root, mode='val', aug_type=aug_type,height=args.crop_height,width=args.crop_width)
         dataloader_val = DataLoader(val_dataset,
                         batch_size=1,
                         shuffle=False,
@@ -494,7 +478,7 @@ def main():
     else:
 
 
-        train_dataset = CityScapes('train', root)
+        train_dataset = CityScapes('train', root,args.crop_height,args.crop_width)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -502,7 +486,7 @@ def main():
                         pin_memory=False,
                         drop_last=True)
 
-        val_dataset = CityScapes(root=root,mode='val')
+        val_dataset = CityScapes(root=root,mode='val',height=args.crop_height,width=args.crop_width)
         dataloader_val = DataLoader(val_dataset,
                         batch_size=1,
                         shuffle=False,

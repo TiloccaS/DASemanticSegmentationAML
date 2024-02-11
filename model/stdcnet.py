@@ -140,23 +140,20 @@ class STDCNet813(nn.Module):
         self.x8 = nn.Sequential(self.features[2:4])
         self.x16 = nn.Sequential(self.features[4:6])
         self.x32 = nn.Sequential(self.features[6:])
-        
+        print('use pretrain model {}'.format(pretrain_model))
+
         if  "STDCNet" in pretrain_model:
-            print('use pretrain model {}'.format(pretrain_model))
             self.init_weight(pretrain_model)
         else:
-            print('use pretrain model {}'.format(pretrain_model))
             self.init_params()
 
-    def init_weight(self, pretrain_model):
-        print(pretrain_model)
-        
+    def init_weight(self, pretrain_model):        
         state_dict = torch.load(pretrain_model)["state_dict"]
-        #print(state_dict.keys())
+        
         self_state_dict = self.state_dict()
         for k, v in state_dict.items():
             self_state_dict.update({k: v})
-        print("sto usando la rete pre-trained")
+        print("sto usando la rete pre-trained: ",pretrain_model)
         self.load_state_dict(self_state_dict)
 
     def init_params(self):

@@ -8,7 +8,11 @@ import random
 import numbers
 import torchvision
 
-
+def pil_loader(path):
+    with open(path, 'rb') as f:
+        img = Image.open(f)
+        return img.convert('RGB')
+	
 def poly_lr_scheduler(optimizer, init_lr, iter, lr_decay_iter=1,
                       max_iter=300, power=0.9):
 	"""Polynomial decay of learning rate

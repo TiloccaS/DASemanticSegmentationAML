@@ -13,33 +13,11 @@ import torch
 import numpy as np
 import json
 import random
-#questo lìho aggiunto per un bug
-def pil_loader_label(path):
-    with open(path, 'rb') as f:
-        img = Image.open(f)
-        return img
-def pil_loader(path):
-    with open(path, 'rb') as f:
-        img = Image.open(f)
-        return img.convert('RGB')
- 
-def modifica_tensore(tensore):
-    # Crea una maschera per gli elementi > 19 e diversi da 255
-    maschera = (tensore >= 19) & (tensore != 255)
+from dataset.utils import pil_loader
 
-    # Modifica gli elementi che soddisfano la condizione
-    tensore[maschera] = 255
-    return tensore
-def conta_elementi(tensore):
-    # Creazione di un tensore booleano con True per gli elementi che sono maggiori di 19 e diversi da 255
-    condizione = (tensore > 19) & (tensore != 255)
-    
-    # Estrai i valori che soddisfano la condizione
-    valori_soddisfacenti = tensore[condizione]
-    print("ci sono ", len(valori_soddisfacenti), "sbagliati su ", tensore.numel())
 class CityScapes(Dataset):
     
-    def __init__(self, mode,root, cropsize=(640, 480),randomscale=(0.125, 0.25, 0.375, 0.5, 0.675, 0.75, 0.875, 1.0, 1.25, 1.5)):
+    def __init__(self, mode,root,height,width):
         super(CityScapes, self).__init__()
         # TODO
         self.root = os.path.normpath(root)
@@ -47,7 +25,7 @@ class CityScapes(Dataset):
         images_paths = []
         labels_paths = []
         normalizer = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
-
+        self.resize=(height,width)
         #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root, 'images', mode)
         label_dir = os.path.join(self.root, 'gtFine', mode)
@@ -96,14 +74,10 @@ class CityScapes(Dataset):
         image_path = self.data["image_path"].iloc[idx]
         label_path=self.data["label_path"].iloc[idx]
         image,label = pil_loader(image_path),Image.open(label_path)
-        image=image.resize((512,1024),Image.BILINEAR)
-        label=label.resize((512,1024),Image.NEAREST)
+        image=image.resize(self.resize,Image.BILINEAR)
+        label=label.resize(self.resize,Image.NEAREST)
         image=self.to_tensor(image)
         label=self.to_tensor_label(label)
-        torch.set_printoptions(profile="full")
-        #print(label)
-        #label=modifica_tensore(label)
-        #conta_elementi(label)
         return image, label
     
 
