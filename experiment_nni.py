@@ -3,7 +3,6 @@ from nni.experiment import Experiment
 import os
 import argparse
 import sys
-
 if __name__== "__main__":
     parse = argparse.ArgumentParser()
     parse.add_argument('--root',
@@ -14,7 +13,7 @@ if __name__== "__main__":
     parse.add_argument('--root_source',
                        dest='root_source',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/GTA5',
     )
     parse.add_argument('--root_target',
                        dest='root_target',
@@ -24,7 +23,7 @@ if __name__== "__main__":
     #parametro aggiunto per capire se vogliamo usare cityspaces o gta
     parse.add_argument('--dataset',
                        dest='dataset',
-                       type=str,
+                       type=str, 
                        default='Cityspaces',
                        help='Select Dataset between GTAV and Cityspaces'
     )
@@ -41,7 +40,7 @@ if __name__== "__main__":
     )
     parse.add_argument('--use_conv_last',
                        dest='use_conv_last',
-                       type=str2bool,
+                       type=bool,
                        default=False,
     )
 
@@ -131,7 +130,11 @@ if __name__== "__main__":
         " --root_target "+args.root_target +" --dataset "+args.dataset +" --backbone "+args.backbone+\
         " --pretrain_path "+args.pretrain_path+" --use_conv_last "+str(args.use_conv_last)+" --epoch_start_i "+str(args.epoch_start_i)+\
         " --checkpoint_step "+str(args.checkpoint_step)+" --validation_step "+str(args.validation_step)+" --crop_height "+str(args.crop_height)+" --crop_width "+str(args.crop_width)+\
-        " --num_workers "+str(args.num_workers)+" --num_classes "+str(args.num_classes)+" --cuda "+args.cuda
+        " --num_workers "+str(args.num_workers)+" --num_classes "+str(args.num_classes)+" --cuda "+args.cuda + "--use_gpu"+str(args.use_gpu)+\
+        " --save_model_path "+args.save_model_path+" --optimizer "+args.optimizer+" --loss "+args.loss + "--iter_size"+str(args.iter_size)+\
+        " --domain_shift "+str(args.domain_shift)+" --domain_adaptation "+str(args.domain_adaptation)+" --momentum "+str(args.momentum) 
+        
+    
     experiment.config.trial_code_directory = "./" #'./sbonito'
     #experiment.config.trial_gpu_number=1
     #experiment.config.use_active_gpu=True
@@ -143,7 +146,7 @@ if __name__== "__main__":
 
     #experiment.config.max_experiment_duration = '5m'
 
-    for port in range(8020,8090):
+    for port in range(8080,8081):
         try:
             experiment.run(port)
             sys.exit(0)

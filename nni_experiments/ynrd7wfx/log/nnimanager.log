@@ -1,0 +1,10 @@
+[2024-02-11 15:07:47] INFO (main) Start NNI manager
+[2024-02-11 15:07:47] INFO (RestServer) Starting REST server at port 8086, URL prefix: "/"
+[2024-02-11 15:07:47] INFO (RestServer) REST server started.
+[2024-02-11 15:07:47] WARNING (NNITensorboardManager) Tensorboard may not installed, if you want to use tensorboard, please check if tensorboard installed.
+[2024-02-11 15:07:49] INFO (NNIDataStore) Datastore initialization done
+[2024-02-11 15:07:52] INFO (main) Start NNI manager
+[2024-02-11 15:07:52] INFO (RestServer) Starting REST server at port 8088, URL prefix: "/"
+[2024-02-11 15:07:52] INFO (RestServer) REST server started.
+[2024-02-11 15:07:52] WARNING (NNITensorboardManager) Tensorboard may not installed, if you want to use tensorboard, please check if tensorboard installed.
+[2024-02-11 15:07:52] INFO (NNIDataStore) Datastore initialization done
