@@ -328,8 +328,9 @@ if __name__ == '__main__':
     ## dataset
     n_classes = args.num_classes
 
-    root = parse.args.root
+    root = args.root
     aug_type = args.aug_type
+    params = nni.get_next_parameter()
 
     val_dataset = CityScapes(root=root,mode='val',height=args.crop_height,width=args.crop_width)
     dataloader_val = DataLoader(val_dataset,
@@ -347,5 +348,8 @@ if __name__ == '__main__':
 
     if args.domain_adaptation:
         print(True)
-        train_DA(args, model, dataloader_val)
+        train_DA(args, model, dataloader_val, batch_size=params['batch-size'], learning_rate=params['learning_rate'],
+                learning_rate_D=params['learning_rate_D'], num_epochs=params['num_epochs'], lambda_adv_target1=params['lambda_adv_target1'],
+                weight_decay=params['weight_decay'])
+        
 

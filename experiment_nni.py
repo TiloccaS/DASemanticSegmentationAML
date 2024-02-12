@@ -114,10 +114,10 @@ if __name__== "__main__":
                        help='type of Data Augmentation to apply')
 
     search_space = {
-        'batch-size': {'_type': 'randint', '_value': [2, 16]},
+        'batch-size': {'_type': 'randint', '_value': [2, 8]},
         'learning_rate': {'_type': 'loguniform', '_value': [0.0001, 0.1]},
         'learning_rate_D':{'_type': 'loguniform', '_value': [1e-6, 1e-3]},
-        'num_epochs':{'_type': 'randint', '_value': [25, 50]},
+        'num_epochs':{'_type': 'randint', '_value': [2, 50]},
         'lambda_adv_target1':{'_type': 'uniform', '_value': [1e-5, 1e-3]},
         'weight_decay':{'_type': 'uniform', '_value': [1e-5, 0.01]},
     }
@@ -136,10 +136,8 @@ if __name__== "__main__":
         
     print("ciao")
     experiment.config.trial_code_directory = "./" #'./sbonito'
-    experiment.config.trial_gpu_number = 0
-    #experiment.config.trial_gpu_number=1
-    #experiment.config.training_service.use_active_gpu = True
-    #experiment.config.use_active_gpu=True
+    #experiment.config.trial_gpu_number = 1
+    experiment.config.tuner_gpu_indices = '0'
 
     experiment.config.experiment_working_directory="./nni_experiments_3" #'./sbonito/nni-experiments'
 
