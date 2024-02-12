@@ -6,3 +6,4 @@ tqdm
 nni
 scipy
 node
+hyperopt

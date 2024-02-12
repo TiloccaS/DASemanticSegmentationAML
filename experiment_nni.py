@@ -118,7 +118,7 @@ if __name__== "__main__":
         'learning_rate': {'_type': 'loguniform', '_value': [0.0001, 0.1]},
         'learning_rate_D':{'_type': 'loguniform', '_value': [1e-6, 1e-3]},
         'num_epochs':{'_type': 'randint', '_value': [25, 50]},
-        'lambda_adv_target1':{'_type': 'uniform', '_value': [1e-5, 1e-5]},
+        'lambda_adv_target1':{'_type': 'uniform', '_value': [1e-5, 1e-3]},
         'weight_decay':{'_type': 'uniform', '_value': [1e-5, 0.01]},
     }
     args = parse.parse_args()
@@ -130,13 +130,15 @@ if __name__== "__main__":
         " --root_target "+args.root_target +" --dataset "+args.dataset +" --backbone "+args.backbone+\
         " --pretrain_path "+args.pretrain_path+" --use_conv_last "+str(args.use_conv_last)+" --epoch_start_i "+str(args.epoch_start_i)+\
         " --checkpoint_step "+str(args.checkpoint_step)+" --validation_step "+str(args.validation_step)+" --crop_height "+str(args.crop_height)+" --crop_width "+str(args.crop_width)+\
-        " --num_workers "+str(args.num_workers)+" --num_classes "+str(args.num_classes)+" --cuda "+args.cuda + "--use_gpu"+str(args.use_gpu)+\
-        " --save_model_path "+args.save_model_path+" --optimizer "+args.optimizer+" --loss "+args.loss + "--iter_size"+str(args.iter_size)+\
+        " --num_workers "+str(args.num_workers)+" --num_classes "+str(args.num_classes)+" --cuda "+args.cuda + " --use_gpu "+str(args.use_gpu)+\
+        " --save_model_path "+args.save_model_path+" --optimizer "+args.optimizer+" --loss "+args.loss + " --iter_size "+str(args.iter_size)+\
         " --domain_shift "+str(args.domain_shift)+" --domain_adaptation "+str(args.domain_adaptation)+" --momentum "+str(args.momentum) 
         
     print("ciao")
     experiment.config.trial_code_directory = "./" #'./sbonito'
+    experiment.config.trial_gpu_number = 0
     #experiment.config.trial_gpu_number=1
+    #experiment.config.training_service.use_active_gpu = True
     #experiment.config.use_active_gpu=True
 
     experiment.config.experiment_working_directory="./nni_experiments_3" #'./sbonito/nni-experiments'
@@ -144,9 +146,7 @@ if __name__== "__main__":
     experiment.config.max_trial_number = 10
     experiment.config.trial_concurrency = 1
 
-    experiment.config.max_experiment_duration = '1h'
-
- 
+    experiment.config.max_experiment_duration = '3h'
 
     for port in range(8030,8090):
         try:

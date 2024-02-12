@@ -19,6 +19,7 @@ import torch.cuda.amp as amp
 from model.discriminator import FCDiscriminator
 from utils import poly_lr_scheduler, reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu
 from tqdm.auto import tqdm
+from train import str2bool
 
 def val(args, model, dataloader):
     print('start val!')

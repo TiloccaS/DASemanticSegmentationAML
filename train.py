@@ -376,7 +376,7 @@ def parse_args():
                         help='learning rate used for train')
     parse.add_argument('--learning_rate_D',
                        type=float,
-                       default=1e-4,
+                       default=1e-3,
                        help='learning rate used for discriminator')
     parse.add_argument('--num_workers',
                        type=int,
@@ -501,7 +501,6 @@ def main():
         return None
 
     if args.domain_adaptation:
-        print(True)
         train_DA(args, model, dataloader_val)
 
     if not args.domain_shift:
