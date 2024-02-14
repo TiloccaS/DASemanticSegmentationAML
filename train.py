@@ -3,7 +3,7 @@
 from model.model_stages import BiSeNet
 from dataset.cityscapes import CityScapes
 from dataset.GTAV import GtaV
-from model.discriminator import FCDiscriminator
+from model.discriminator import FCDiscriminator,DepthWiseBNFCDiscriminator
 import torch
 from torch.utils.data import DataLoader
 import os
@@ -141,9 +141,13 @@ def train_DA(args, model, dataloader_val):
     step = 0
     lr=args.learning_rate
     lr_D1=args.learning_rate_D
-
-    model_D1 = FCDiscriminator(num_classes=args.num_classes)
-    model_D1=torch.nn.DataParallel(model_D1).cuda()
+    if args.depthwise==False:
+        model_D1 = FCDiscriminator(num_classes=args.num_classes)
+        model_D1=torch.nn.DataParallel(model_D1).cuda()
+    else:
+        print("You are using depthwise discrminator...")
+        model_D1 = DepthWiseBNFCDiscriminator(num_classes=args.num_classes)
+        model_D1=torch.nn.DataParallel(model_D1).cuda()
 
     source_dataset = GtaV('train', args.root_source, args.aug_type,args.crop_height,args.crop_width)
     dataloader_source = DataLoader(source_dataset,
@@ -285,6 +289,12 @@ def train_DA(args, model, dataloader_val):
                 torch.save(model.module.state_dict(), os.path.join(args.save_model_path, 'best.pth'))
             writer.add_scalar('epoch/precision_val', precision, epoch)
             writer.add_scalar('epoch/miou val', miou, epoch)
+
+    total_params = sum(
+	param.numel() for param in model_D1.parameters()
+    )
+    print("The discriminator has: ",total_params)
+
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -434,7 +444,7 @@ def parse_args():
                        type=str,
                        default=None,
                        help='type of Data Augmentation to apply')
-    
+    parse.add_argument('--depthwise',type=bool,default=False)
 
 
     return parse.parse_args()
