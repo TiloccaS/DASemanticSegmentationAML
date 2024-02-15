@@ -18,17 +18,15 @@ from dataset.utils import pil_loader
 
 class GtaV(Dataset):
     
-    def __init__(self, mode, root, aug_type,height,width):
+    def __init__(self, root, aug_type,height,width):
         super(GtaV, self).__init__()
         # TODO
         self.root = os.path.normpath(root)
-        self.split = mode
         images_paths = []
         labels_paths = []
         self.resize=(height,width)
         #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root)
-        label_dir = os.path.join(self.root)
         self.root = os.path.normpath(image_dir)
         with open('./dataset/gta5_info.json', 'r') as fr:
             labels_info = json.load(fr)
@@ -78,10 +76,8 @@ class GtaV(Dataset):
 
         image_files.sort()
 
-        split_index = int(0.75 * len(image_files)) 
-
-        split_files = image_files[:split_index] if self.split == 'train' else image_files[split_index:]
-        for img in split_files:
+        
+        for img in image_files:
             images_paths.append(self.root+'/images/'+img)
         
         label_files = os.listdir(os.path.normpath(os.path.join(self.root, 'labels')))
@@ -89,10 +85,8 @@ class GtaV(Dataset):
 
         label_files.sort()
 
-        split_index = int(0.75 * len(image_files)) 
-        split_labels = label_files[:split_index] if self.split == 'train' else label_files[split_index:]
-
-        for lbl in split_labels:
+   
+        for lbl in label_files:
            labels_paths.append(self.root+'/labels/'+lbl)
            
            

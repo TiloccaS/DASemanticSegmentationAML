@@ -5,7 +5,7 @@ from dataset.cityscapes import CityScapes
 from dataset.GTAV import GtaV
 from model.discriminator import FCDiscriminator,DepthWiseBNFCDiscriminator
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import Subset,DataLoader
 import os
 import logging 
 import argparse
@@ -16,8 +16,7 @@ import torch.cuda.amp as amp
 from utils import poly_lr_scheduler
 from utils import reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu
 from tqdm.auto import tqdm
- 
-
+from sklearn.model_selection import train_test_split
 logger = logging.getLogger()
 
 
@@ -149,7 +148,13 @@ def train_DA(args, model, dataloader_val):
         model_D1 = DepthWiseBNFCDiscriminator(num_classes=args.num_classes)
         model_D1=torch.nn.DataParallel(model_D1).cuda()
 
-    source_dataset = GtaV('train', args.root_source, args.aug_type,args.crop_height,args.crop_width)
+    dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
+
+    indexes = range(0, len(dataset))
+    splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, stratify = dataset.data["label_path"], shuffle = True)
+    train_indexes = splitting[0]
+    source_dataset = Subset(dataset, train_indexes)
+
     dataloader_source = DataLoader(source_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -459,7 +464,16 @@ def main():
     root = args.root
     aug_type = args.aug_type
     if args.dataset == 'GTAV':
-        train_dataset = GtaV('train', root, aug_type,args.crop_height,args.crop_width)
+        dataset = GtaV( root, aug_type,args.crop_height,args.crop_width)
+
+        indexes = range(0, len(dataset))
+        splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, shuffle = True)
+        train_indexes = splitting[0]
+        val_indexes = splitting[1]
+
+        train_dataset = Subset(dataset, train_indexes)
+        val_dataset = Subset(dataset, val_indexes)
+
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -467,7 +481,6 @@ def main():
                         pin_memory=False,
                         drop_last=True)
 
-        val_dataset = GtaV(root=root, mode='val', aug_type=aug_type,height=args.crop_height,width=args.crop_width)
         dataloader_val = DataLoader(val_dataset,
                         batch_size=1,
                         shuffle=False,
