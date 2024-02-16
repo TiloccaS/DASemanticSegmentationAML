@@ -319,47 +319,38 @@ def parse_args():
     #ho aggiunto la root che sarebbe la root del dataaset
     #il default e quella del mio pc, si dovrebbe cambiare
     
-    
     parse.add_argument('--root',
                        dest='root',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
-    )
+                       default='../Datasets/Cityscapes')
     parse.add_argument('--root_source',
                        dest='root_source',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
-    )
+                       default='../Datasets/GTA5')
     parse.add_argument('--root_target',
                        dest='root_target',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
-    )
+                       default='../Datasets/GTA5')
     #parametro aggiunto per capire se vogliamo usare cityspaces o gta
     parse.add_argument('--dataset',
                        dest='dataset',
                        type=str,
                        default='Cityspaces',
-                       help='Select Dataset between GTAV and Cityspaces'
-    )
- 
+                       help='Select Dataset between GTAV and Cityspaces')
     parse.add_argument('--backbone',
                        dest='backbone',
                        type=str,
-                       default='CatmodelSmall',
-    )
+                       default='CatmodelSmall')
     parse.add_argument('--pretrain_path',
                       dest='pretrain_path',
                       type=str,
-                      default='',
-    )
+                      default='')
     parse.add_argument('--use_conv_last',
                        dest='use_conv_last',
                        type=str2bool,
-                       default=False,
-    )
+                       default=False)
     parse.add_argument('--num_epochs',
-                       type=int, default=300,
+                       type=int, default=50,
                        help='Number of epochs to train for')
     parse.add_argument('--epoch_start_i',
                        type=int,
@@ -383,7 +374,7 @@ def parse_args():
                        help='Width of cropped/resized input image to modelwork')
     parse.add_argument('--batch_size',
                        type=int,
-                       default=2,
+                       default=8,
                        help='Number of images in each batch')
     parse.add_argument('--learning_rate',
                         type=float,
@@ -395,7 +386,7 @@ def parse_args():
                        help='learning rate used for discriminator')
     parse.add_argument('--num_workers',
                        type=int,
-                       default=0,
+                       default=4,
                        help='num of workers')
     parse.add_argument('--num_classes',
                        type=int,
@@ -415,7 +406,7 @@ def parse_args():
                        help='path to save model')
     parse.add_argument('--optimizer',
                        type=str,
-                       default='adam',
+                       default='sgd',
                        help='optimizer, support rmsprop, sgd, adam')
     parse.add_argument('--loss',
                        type=str,
@@ -450,7 +441,6 @@ def parse_args():
                        default=None,
                        help='type of Data Augmentation to apply')
     parse.add_argument('--depthwise',type=bool,default=False)
-
 
     return parse.parse_args()
 
