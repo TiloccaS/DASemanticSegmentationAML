@@ -148,12 +148,12 @@ def train_DA(args, model, dataloader_val):
         model_D1 = DepthWiseBNFCDiscriminator(num_classes=args.num_classes)
         model_D1=torch.nn.DataParallel(model_D1).cuda()
 
-    dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
+    source_dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
 
-    indexes = range(0, len(dataset))
+    '''indexes = range(0, len(dataset))
     splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, shuffle = True)
     train_indexes = splitting[0]
-    source_dataset = Subset(dataset, train_indexes)
+    source_dataset = Subset(dataset, train_indexes)'''
 
     dataloader_source = DataLoader(source_dataset,
                         batch_size=args.batch_size,
@@ -186,8 +186,8 @@ def train_DA(args, model, dataloader_val):
 
     for epoch in range(args.num_epochs):
 
-        lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=args.num_epochs)
-        lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=args.num_epochs)
+        lr = poly_lr_scheduler(optimizer, lr, epoch, max_iter=args.num_epochs)
+        lr_D1 = poly_lr_scheduler(optimizer_D1, lr_D1, epoch, max_iter=args.num_epochs)
         model.train()
         model_D1.train()
       
@@ -222,7 +222,9 @@ def train_DA(args, model, dataloader_val):
                 loss = loss1 + loss2 + loss3
 
             scaler.scale(loss).backward()
-            
+            scaler.step(optimizer)
+            scaler.update()
+
             images, labels= target_data
             labels = labels[ :, :, :].long().cuda()
             images = images.cuda()
@@ -236,6 +238,8 @@ def train_DA(args, model, dataloader_val):
                 loss_D1=loss_adv_target1*args.lambda_adv_target1
             # proper normalization
             scaler.scale(loss_D1).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
 
             for param in model_D1.parameters():
@@ -251,6 +255,8 @@ def train_DA(args, model, dataloader_val):
                                         torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
                 
             scaler.scale(loss_adv_source1).backward()
+            scaler.step(optimizer_D1)
+            scaler.update()
 
             with amp.autocast():
 
@@ -258,9 +264,8 @@ def train_DA(args, model, dataloader_val):
                 loss_adv_target1 = bce_loss(D_out1,
                                         torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())
 
+            optimizer_D1.zero_grad()
             scaler.scale(loss_adv_target1).backward()
-
-            scaler.step(optimizer)
             scaler.step(optimizer_D1)
             scaler.update()
 
