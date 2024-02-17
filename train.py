@@ -151,7 +151,7 @@ def train_DA(args, model, dataloader_val):
     dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
 
     indexes = range(0, len(dataset))
-    splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, stratify = dataset.data["label_path"], shuffle = True)
+    splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, shuffle = True)
     train_indexes = splitting[0]
     source_dataset = Subset(dataset, train_indexes)
 
@@ -330,7 +330,7 @@ def parse_args():
     parse.add_argument('--root_target',
                        dest='root_target',
                        type=str,
-                       default='../Datasets/GTA5')
+                       default='../Datasets/Cityscapes')
     #parametro aggiunto per capire se vogliamo usare cityspaces o gta
     parse.add_argument('--dataset',
                        dest='dataset',
@@ -440,7 +440,9 @@ def parse_args():
                        type=str,
                        default=None,
                        help='type of Data Augmentation to apply')
-    parse.add_argument('--depthwise',type=bool,default=False)
+    parse.add_argument('--depthwise',
+                       type=bool,
+                       default=False)
 
     return parse.parse_args()
 
@@ -513,13 +515,13 @@ def main():
         print('not supported optimizer \n')
         return None
 
-    if args.domain_adaptation:
-        train_DA(args, model, dataloader_val)
-
     if not args.domain_shift:
-        ## train loop
-        train(args, model, optimizer, dataloader_train, dataloader_val)
-        
+        if args.domain_adaptation:
+            train_DA(args, model, dataloader_val)
+        else:
+            ## train loop
+            train(args, model, optimizer, dataloader_train, dataloader_val)
+    
     # final test
     val(args, model, dataloader_val)
 
