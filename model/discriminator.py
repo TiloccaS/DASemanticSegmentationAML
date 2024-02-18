@@ -69,36 +69,34 @@ class DepthWiseBNFCDiscriminator(nn.Module):
 
 	def forward(self, x):
 		x = self.conv1_d(x)
-		x=self.bn1_d(x)
+		#x=self.bn1_d(x)
 		x = self.leaky_relu(x)
 		x=self.conv1_p(x)
-		x=self.bn1_p(x)
+		#x=self.bn1_p(x)
 		x = self.leaky_relu(x)
 
 
 		x = self.conv2_d(x)
-		x=self.bn2_d(x)
+		#x=self.bn2_d(x)
 		x = self.leaky_relu(x)
 		x=self.conv2_p(x)
-		x=self.bn2_p(x)
+		#x=self.bn2_p(x)
 		x = self.leaky_relu(x)
 
 
 		x = self.conv3_d(x)
-		x=self.bn3_d(x)
+		#x=self.bn3_d(x)
 		x = self.leaky_relu(x)
 		x=self.conv3_p(x)
-		x=self.bn3_p(x)
+		#x=self.bn3_p(x)
 		x = self.leaky_relu(x)
 
 		x = self.conv4_d(x)
-		x=self.bn4_d(x)
+		#x=self.bn4_d(x)
 		x = self.leaky_relu(x)
 		x=self.conv4_p(x)
-		x=self.bn4_p(x)
+		#x=self.bn4_p(x)
 		x = self.leaky_relu(x)
-
+		
 		x = self.classifier(x)
-
-
 		return x
