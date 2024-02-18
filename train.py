@@ -232,7 +232,7 @@ def train_DA(args, model, dataloader_val):
 
             optimizer.zero_grad()
             with amp.autocast():
-                D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
+                D_out1=model_D1(torch.nn.functional.softmax(output_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,
                                         source_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())
             
@@ -246,12 +246,12 @@ def train_DA(args, model, dataloader_val):
             for param in model_D1.parameters():
                 param.requires_grad = True  
             
-            out32=out32.detach()
-            out32_t=out32_t.detach() 
+            output=output.detach()
+            output_t=output_t.detach() 
             
 
             with amp.autocast():
-                D_out1=model_D1(torch.nn.functional.softmax(out32,dim=1)) 
+                D_out1=model_D1(torch.nn.functional.softmax(output,dim=1)) 
                 loss_adv_source1 = bce_loss(D_out1,
                                         source_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())
                 
@@ -261,7 +261,7 @@ def train_DA(args, model, dataloader_val):
 
             with amp.autocast():
 
-                D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
+                D_out1=model_D1(torch.nn.functional.softmax(output_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,target_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())    
             optimizer_D1.zero_grad()
             scaler.scale(loss_adv_target1).backward()
