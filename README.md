@@ -13,7 +13,6 @@ This code has been tested on python 3.9.16.
 ```
 
 git clone https://github.com/TiloccaS/DASemanticSegmentationAML.git
-python3 -m venv my_env
 pip install --upgrade pip
 pip install -r requirements.txt
 
