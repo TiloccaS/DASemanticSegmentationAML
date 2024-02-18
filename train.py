@@ -141,12 +141,10 @@ def train_DA(args, model, dataloader_val):
     lr=args.learning_rate
     lr_D1=args.learning_rate_D
     if args.depthwise==False:
-        model_D1 = FCDiscriminator(num_classes=args.num_classes)
-        model_D1=torch.nn.DataParallel(model_D1).cuda()
+        model_D1=torch.nn.DataParallel(FCDiscriminator(num_classes=args.num_classes)).cuda()
     else:
         print("You are using depthwise discrminator...")
-        model_D1 = DepthWiseBNFCDiscriminator(num_classes=args.num_classes)
-        model_D1=torch.nn.DataParallel(model_D1).cuda()
+        model_D1=torch.nn.DataParallel(DepthWiseBNFCDiscriminator(num_classes=args.num_classes)).cuda()
 
     source_dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
 
@@ -181,28 +179,19 @@ def train_DA(args, model, dataloader_val):
     bce_loss = torch.nn.BCEWithLogitsLoss()
 
     # labels for adversarial training
-    source_label = 0
-    target_label = 1
-
+    
     for epoch in range(args.num_epochs):
+        source_label = torch.zeros
+        target_label = torch.ones
+
 
         lr = poly_lr_scheduler(optimizer, lr, epoch, max_iter=args.num_epochs)
         lr_D1 = poly_lr_scheduler(optimizer_D1, lr_D1, epoch, max_iter=args.num_epochs)
-        model.train()
-        model_D1.train()
-      
         tq = tqdm(total=min(len(dataloader_source),len(dataloader_target))* args.batch_size )
         tq.set_description('epoch %d, lr_segmentation %f, lr_discriminator %f'% (epoch, lr, lr_D1))
+        loss_record=[]
+        loss_record_D=[]
         for i, (source_data, target_data) in enumerate(zip(dataloader_source,dataloader_target)):
-
-            # train G
-
-            # don't accumulate grads in D
-            for param in model_D1.parameters():
-                param.requires_grad = False
-
-
-         
 
             # train with source
 
@@ -210,9 +199,20 @@ def train_DA(args, model, dataloader_val):
             images, labels= source_data
             labels = labels[ :, :, :].long().cuda()
             images = images.cuda()
+            images_t, _= target_data
+            images_t = images_t.cuda()
             optimizer.zero_grad()
             optimizer_D1.zero_grad()
-          
+
+
+            model.train()
+            model_D1.train()
+            
+            # don't accumulate grads in D
+            for param in model_D1.parameters():
+                param.requires_grad = False
+
+
             with amp.autocast():
                 output, out16, out32 = model(images)
 
@@ -225,17 +225,18 @@ def train_DA(args, model, dataloader_val):
             scaler.step(optimizer)
             scaler.update()
 
-            images, labels= target_data
-            labels = labels[ :, :, :].long().cuda()
-            images = images.cuda()
+            
             with amp.autocast():
-                output_t, out16_t, out32_t = model(images)
+                output_t, out16_t, out32_t = model(images_t)
 
+
+            optimizer.zero_grad()
+            with amp.autocast():
                 D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
+                                        source_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())
             
-                loss_D1=loss_adv_target1*args.lambda_adv_target1
+            loss_D1=loss_adv_target1*args.lambda_adv_target1
             # proper normalization
             scaler.scale(loss_D1).backward()
             scaler.step(optimizer)
@@ -252,7 +253,7 @@ def train_DA(args, model, dataloader_val):
             with amp.autocast():
                 D_out1=model_D1(torch.nn.functional.softmax(out32,dim=1)) 
                 loss_adv_source1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
+                                        source_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())
                 
             scaler.scale(loss_adv_source1).backward()
             scaler.step(optimizer_D1)
@@ -261,9 +262,7 @@ def train_DA(args, model, dataloader_val):
             with amp.autocast():
 
                 D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
-                loss_adv_target1 = bce_loss(D_out1,
-                                        torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())
-
+                loss_adv_target1 = bce_loss(D_out1,target_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())    
             optimizer_D1.zero_grad()
             scaler.scale(loss_adv_target1).backward()
             scaler.step(optimizer_D1)
@@ -271,7 +270,8 @@ def train_DA(args, model, dataloader_val):
 
             loss_G = loss + loss_D1
             loss_adv = loss_adv_source1 + loss_adv_target1
-            
+            loss_record.append(loss_G.item())
+            loss_record_D.append(loss_adv.item())
             tq.update(args.batch_size)
             tq.set_postfix(loss='%.6f' % loss, loss_G='%.6f' % loss_G, loss_adv='%.6f' % loss_adv)
 
@@ -282,7 +282,7 @@ def train_DA(args, model, dataloader_val):
 
         print('exp = {}'.format(args.save_model_path))
         
-        print('iter = {0:1d}/{1}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, loss_G, loss_adv))
+        print('iter = {0:1d}/{1}, loss_seg = {2:.3f} loss_D1 = {3:.3f}'.format(epoch, args.num_epochs, np.mean(loss_record), np.mean(loss_record_D)))
         tq.close()
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             print ('save model ...')
@@ -439,7 +439,7 @@ def parse_args():
                        help='Regularisation parameter for L2-loss')
     parse.add_argument('--lambda_adv_target1',
                        type=float,
-                       default=0.0002,
+                       default=0.001,
                        help='lambda_adv for adversarial training')
     parse.add_argument('--aug_type',
                        type=str,
