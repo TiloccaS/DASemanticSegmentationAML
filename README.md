@@ -1,5 +1,5 @@
 # DASemanticSegmentationAML
-Semantic segmentation is a crucial task for imageanalysis, but its effectiveness can be compromised when the modelis applied to a domain other than the one in which it was trained. What we propose in this repository is the possibility to do Semantic Segmentation and Domain Adaptation on datasets such as Cityscapes and GTAV, moreover we propose the use of the [NNI](https://nni.readthedocs.io/en/stable/) tool capable of otimizing hyperparameters.
+Semantic segmentation is a crucial task for image analysis, but its effectiveness can be compromised when the modelis applied to a domain other than the one in which it was trained. What we propose in this repository is the possibility to do Semantic Segmentation and Domain Adaptation on datasets such as Cityscapes and GTAV, moreover we propose the use of the [NNI](https://nni.readthedocs.io/en/stable/) tool capable of otimizing hyperparameters.
 
 ## Background
 Semantic segmentation is a classic and fundamental topic in computer vision, which aims to assign pixel-level labels in images. The prosperity of deep learning greatly promotes the performance of semantic segmentation by making various breakthroughs, coming with fast-growing demands in many applications, e.g., autonomous driving, video surveillance, robot sensing, and so on. Semantic Segmentation is a crucial task for image analysis, but its effectiveness can be compromised when the model is applied to a domain other than the one in which it was trained, Domain Adaptation is a technique that can help us in these cases, they have been developed to address the domain-shift problem between the source and target domains. The main insight behind these approaches is to tackle the problem by aligning the feature distribution between source and target images.
@@ -9,7 +9,7 @@ Semantic segmentation is a classic and fundamental topic in computer vision, whi
 The dataset of GTAV and Cityscapes are available [here](https://drive.google.com/drive/folders/1iE8wJT7tuDOVjEBZ7A3tOPZmNdroqG1m)
 
 ### Installation
-This code has been tested on python 3.9.16.
+This code has been tested on python 3.10.12.
 ```
 
 git clone https://github.com/TiloccaS/DASemanticSegmentationAML.git
@@ -36,14 +36,14 @@ Without Data Augmentation:
 
 
 ```
-python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/NoDA_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/NoDA_best.pth' --domain_shift True
 
 ```
 
 With Data Augmentation: 
 
 ```
-python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/H-RP_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/H-RP_best.pth' --domain_shift True
 
 ```
 
