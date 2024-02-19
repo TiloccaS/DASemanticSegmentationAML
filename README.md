@@ -54,7 +54,7 @@ python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --r
 ```
 ### 4nd  IMPROVEMENTS
 
-#### A) Different and lighter discriminator function with Depth Wise Discriminator
+#### A) Different and lighter discriminator function with Depth Wise Separable Convolution for the Discriminator
 Without Batch Normalization: 
 
 ```
