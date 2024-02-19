@@ -115,10 +115,10 @@ if __name__== "__main__":
 
     #here we have the search for the hyper parameter that we want optimize with the respective range
     search_space = {
-        'batch-size': {'_type': 'randint', '_value': [2, 8]},
+        'batch-size': {'_type': 'randint', '_value': [2, 12]},
         'learning_rate': {'_type': 'loguniform', '_value': [0.0001, 0.1]},
         'learning_rate_D':{'_type': 'loguniform', '_value': [1e-6, 1e-3]},
-        'num_epochs':{'_type': 'randint', '_value': [2, 50]},
+        'num_epochs':{'_type': 'randint', '_value': [15, 50]},
         'lambda_adv_target1':{'_type': 'uniform', '_value': [1e-5, 1e-3]},
         'weight_decay':{'_type': 'uniform', '_value': [1e-5, 0.01]},
     }
