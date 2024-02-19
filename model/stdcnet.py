@@ -153,7 +153,7 @@ class STDCNet813(nn.Module):
         self_state_dict = self.state_dict()
         for k, v in state_dict.items():
             self_state_dict.update({k: v})
-        print("sto usando la rete pre-trained: ",pretrain_model)
+        print("i'm using pre-trained: ",pretrain_model)
         self.load_state_dict(self_state_dict)
 
     def init_params(self):

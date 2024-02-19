@@ -26,20 +26,19 @@ class CityScapes(Dataset):
         labels_paths = []
         normalizer = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
         self.resize=(height,width)
-        #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root, 'images', mode)
         label_dir = os.path.join(self.root, 'gtFine', mode)
         self.root = os.path.normpath(image_dir)
-        #questo prende l'immagine dal pil e la trasforma in tensore 
-        #qui ho un dubbio se occorre normalizzare il tensore
+        
+        #transform the images in a tensor
         self.to_tensor = transforms.Compose([
                          transforms.ToTensor(),
                          normalizer
                          #To tensor di default trasforma l'immaigne del pil in un tensore con valori che vanno da 0 a 1
                          
                          ])
-        #questo trasforma la label in tensore, is usa un compose diverso perche per la label ci serve in scala [0,255] e non [0,1]
-        #dubbio
+        #This transforms the label into a tensor, is uses a different component because for the label we need to scale [0,255] and not [0,1]
+
         self.to_tensor_label = transforms.Compose([
                     #transforms.Resize((2048, 1024)),
 
@@ -49,7 +48,7 @@ class CityScapes(Dataset):
         
         for city in os.listdir(image_dir):
             folder_path = os.path.join(image_dir, city)
-            #se andate a vedere come è fatto il dataset è diviso per citta quindi occorre prima spostarci in quella cartella e poi salvare l'immagine
+            #dataset is splitted by city, so e need to change directory
             if os.path.isdir(folder_path):
                  for filename in os.listdir(folder_path):
                     if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
@@ -60,11 +59,12 @@ class CityScapes(Dataset):
             folder_path = os.path.join(label_dir, city_label)
             if os.path.isdir(folder_path):
                  for filename in os.listdir(folder_path):
-                    #check per vedere se la parola colo non è in file name perche a noi interessano solo le immagini in bianco e nero
+                    #to use only label with 19 classes 
                     if filename.lower().endswith(('.png', '.jpg', '.jpeg')) and 'color' not in filename.lower():
                         label_path = os.path.join(folder_path, filename)
                         labels_paths.append(label_path)
-           
+        
+        #sorting we can assign to each images the correspondance label    
         label_order=sorted(labels_paths)
         image_order=sorted(images_paths)
         self.data = pd.DataFrame(zip(image_order, label_order), columns=["image_path", "label_path"])

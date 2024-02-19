@@ -8,17 +8,17 @@ if __name__== "__main__":
     parse.add_argument('--root',
                        dest='root',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+                       default='../Datasets/Cityscapes',
     )
     parse.add_argument('--root_source',
                        dest='root_source',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/GTA5',
+                       default='../Datasets/GTA5',
     )
     parse.add_argument('--root_target',
                        dest='root_target',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+                       default='../Datasets/Cityscapes',
     )
     #parametro aggiunto per capire se vogliamo usare cityspaces o gta
     parse.add_argument('--dataset',
@@ -86,7 +86,7 @@ if __name__== "__main__":
                        help='path to save model')
     parse.add_argument('--optimizer',
                        type=str,
-                       default='adam',
+                       default='sgd',
                        help='optimizer, support rmsprop, sgd, adam')
     parse.add_argument('--loss',
                        type=str,
@@ -113,6 +113,7 @@ if __name__== "__main__":
                        default=None,
                        help='type of Data Augmentation to apply')
 
+    #here we have the search for the hyper parameter that we want optimize with the respective range
     search_space = {
         'batch-size': {'_type': 'randint', '_value': [2, 8]},
         'learning_rate': {'_type': 'loguniform', '_value': [0.0001, 0.1]},
@@ -124,8 +125,12 @@ if __name__== "__main__":
     args = parse.parse_args()
     experiment = Experiment('local')
     experiment.config.search_space = search_space
-    experiment.config.tuner.name = 'Anneal'
+    #This simple annealing algorithm begins by sampling from the prior but tends over time to sample from points closer and closer to the best ones observed. 
+    #This algorithm is a simple variation on random search that leverages smoothness in the response surface. The annealing rate is not adaptive.
+    experiment.config.tuner.name = 'Anneal' 
+    #we maximize beacause we use mIoU 
     experiment.config.tuner.class_args['optimize_mode'] = 'maximize'
+    #file train_nni.py contain the training of domain adaptation using dynamic hyperparameters
     experiment.config.trial_command = 'python train_nni.py --root ' +args.root+" --root_source "+args.root_source+\
         " --root_target "+args.root_target +" --dataset "+args.dataset +" --backbone "+args.backbone+\
         " --pretrain_path "+args.pretrain_path+" --use_conv_last "+str(args.use_conv_last)+" --epoch_start_i "+str(args.epoch_start_i)+\
@@ -134,18 +139,18 @@ if __name__== "__main__":
         " --save_model_path "+args.save_model_path+" --optimizer "+args.optimizer+" --loss "+args.loss + " --iter_size "+str(args.iter_size)+\
         " --domain_shift "+str(args.domain_shift)+" --domain_adaptation "+str(args.domain_adaptation)+" --momentum "+str(args.momentum) 
         
-    print("ciao")
-    experiment.config.trial_code_directory = "./" #'./sbonito'
+    experiment.config.trial_code_directory = "./" 
     #experiment.config.trial_gpu_number = 1
     experiment.config.tuner_gpu_indices = '0'
 
-    experiment.config.experiment_working_directory="./nni_experiments_3" #'./sbonito/nni-experiments'
+    experiment.config.experiment_working_directory="./nni_experiments_3" 
 
     experiment.config.max_trial_number = 10
     experiment.config.trial_concurrency = 1
 
-    experiment.config.max_experiment_duration = '3h'
-
+    experiment.config.max_experiment_duration = '12h'
+    
+    #not always the port 8030 is available so we need to search it
     for port in range(8030,8090):
         try:
             print(port)

@@ -25,14 +25,13 @@ class GtaV(Dataset):
         images_paths = []
         labels_paths = []
         self.resize=(height,width)
-        #si uniscono tutte le directory per imaggini e label in modo da andare a pescare la directory che ci interessa
         image_dir = os.path.join(self.root)
         self.root = os.path.normpath(image_dir)
+        #the classes of the gt images are 34, we need to pass from 34->19, so we need a mapping
         with open('./dataset/gta5_info.json', 'r') as fr:
             labels_info = json.load(fr)
         self.lb_map = {el['id']: el['trainId'] for el in labels_info}
-        #questo prende l'immagine dal pil e la trasforma in tensore 
-        #qui ho un dubbio se occorre normalizzare il tensore
+       
             
         normalizer = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
 
@@ -66,12 +65,10 @@ class GtaV(Dataset):
 
      
         self.to_tensor_label = transforms.Compose([
-                    #transforms.Resize((1024, 1024)),
 
                     transforms.PILToTensor() 
                 ])
-        #questo trasforma la label in tensore, is usa un compose diverso perche per la label ci serve in scala [0,255] e non [0,1]
-        #dubbio
+        
         image_files = os.listdir(os.path.normpath(os.path.join(self.root, 'images')))
 
         image_files.sort()

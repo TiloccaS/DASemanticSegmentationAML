@@ -3,7 +3,7 @@
 from model.model_stages import BiSeNet
 from dataset.cityscapes import CityScapes
 from dataset.GTAV import GtaV
-from model.discriminator import FCDiscriminator,DepthWiseBNFCDiscriminator
+from model.discriminator import FCDiscriminator,DepthWiseBNFCDiscriminator,DepthWiseFCDiscriminator
 import torch
 from torch.utils.data import Subset,DataLoader
 import os
@@ -139,19 +139,23 @@ def train_DA(args, model, dataloader_val):
     max_miou = 0
     step = 0
     lr=args.learning_rate
-    lr_D1=args.learning_rate_D
+    lr_D1=args.learning_rate_D #by default is set to 1e-3 
+
+    #depthwise argument indicates the possibility of using the discriminator using depthwise convolution
     if args.depthwise==False:
         model_D1=torch.nn.DataParallel(FCDiscriminator(num_classes=args.num_classes)).cuda()
     else:
-        print("You are using depthwise discrminator...")
-        model_D1=torch.nn.DataParallel(DepthWiseBNFCDiscriminator(num_classes=args.num_classes)).cuda()
+        if args.batch_norm:
+            print("You are using depthwise discrminator with batch normalization...")
 
+            model_D1=torch.nn.DataParallel(DepthWiseBNFCDiscriminator(num_classes=args.num_classes)).cuda()
+        else: 
+            print("You are using depthwise discrminator...")
+
+            model_D1=torch.nn.DataParallel(DepthWiseFCDiscriminator(num_classes=args.num_classes)).cuda()
+    
+        
     source_dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
-
-    '''indexes = range(0, len(dataset))
-    splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, shuffle = True)
-    train_indexes = splitting[0]
-    source_dataset = Subset(dataset, train_indexes)'''
 
     dataloader_source = DataLoader(source_dataset,
                         batch_size=args.batch_size,
@@ -181,10 +185,14 @@ def train_DA(args, model, dataloader_val):
     # labels for adversarial training
     
     for epoch in range(args.num_epochs):
+        #the discriminator loss is based on identifying the right domain of origin of the labels produced by semantic segmentation
+        #we use torch.zeros for source data (GTAV)
+        #we use torch.ones to indicate target data (CityScapes)
+
         source_label = torch.zeros
         target_label = torch.ones
 
-
+        #poly_lr_scheduler is used to change dynamically the lr at each epoch
         lr = poly_lr_scheduler(optimizer, lr, epoch, max_iter=args.num_epochs)
         lr_D1 = poly_lr_scheduler(optimizer_D1, lr_D1, epoch, max_iter=args.num_epochs)
         tq = tqdm(total=min(len(dataloader_source),len(dataloader_target))* args.batch_size )
@@ -193,7 +201,6 @@ def train_DA(args, model, dataloader_val):
         loss_record_D=[]
         for i, (source_data, target_data) in enumerate(zip(dataloader_source,dataloader_target)):
 
-            # train with source
 
             
             images, labels= source_data
@@ -201,6 +208,7 @@ def train_DA(args, model, dataloader_val):
             images = images.cuda()
             images_t, _= target_data
             images_t = images_t.cuda()
+            #reset the gradients
             optimizer.zero_grad()
             optimizer_D1.zero_grad()
 
@@ -212,6 +220,8 @@ def train_DA(args, model, dataloader_val):
             for param in model_D1.parameters():
                 param.requires_grad = False
 
+
+            #TRAIN GENERATOR
 
             with amp.autocast():
                 output, out16, out32 = model(images)
@@ -232,16 +242,18 @@ def train_DA(args, model, dataloader_val):
 
             optimizer.zero_grad()
             with amp.autocast():
+                #we want a segmentation able to produce target label that are similar to source label 
                 D_out1=model_D1(torch.nn.functional.softmax(output_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,
                                         source_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())
             
             loss_D1=loss_adv_target1*args.lambda_adv_target1
-            # proper normalization
             scaler.scale(loss_D1).backward()
             scaler.step(optimizer)
             scaler.update()
 
+
+            #TRAIN DISCRIMINATOR
 
             for param in model_D1.parameters():
                 param.requires_grad = True  
@@ -249,6 +261,7 @@ def train_DA(args, model, dataloader_val):
             output=output.detach()
             output_t=output_t.detach() 
             
+            #it should be able to recognize when a label comes from source or comes from target
 
             with amp.autocast():
                 D_out1=model_D1(torch.nn.functional.softmax(output,dim=1)) 
@@ -300,6 +313,8 @@ def train_DA(args, model, dataloader_val):
             writer.add_scalar('epoch/precision_val', precision, epoch)
             writer.add_scalar('epoch/miou val', miou, epoch)
 
+    #to understand the importance of how much the discrminator has been made lighter we print the number of parameters
+
     total_params = sum(
 	param.numel() for param in model_D1.parameters()
     )
@@ -318,11 +333,6 @@ def str2bool(v):
 def parse_args():
     parse = argparse.ArgumentParser()
     
-    #questi sono gli argomenti da linea di comando
-    #la maggior parte hanno un valore di default se volete darglielo voi dovete fare
-    #python train.py --batchsize 2 (se per esempio volete modificare la batch size)
-    #ho aggiunto la root che sarebbe la root del dataaset
-    #il default e quella del mio pc, si dovrebbe cambiare
     
     parse.add_argument('--root',
                        dest='root',
@@ -448,7 +458,9 @@ def parse_args():
     parse.add_argument('--depthwise',
                        type=bool,
                        default=False)
-
+    parse.add_argument('--batch_norm',
+                       type=bool,
+                       default=False)
     return parse.parse_args()
 
 
@@ -459,11 +471,14 @@ def main():
     n_classes = args.num_classes
 
     root = args.root
-    aug_type = args.aug_type
+    #we implemented different trasformation for data augmentation, this parameter is used to specify what type of trasformations are required
+    #by default is None 
+    aug_type = args.aug_type 
     if args.dataset == 'GTAV':
         dataset = GtaV( root, aug_type,args.crop_height,args.crop_width)
 
         indexes = range(0, len(dataset))
+        #funciton used to split train and test 
         splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, shuffle = True)
         train_indexes = splitting[0]
         val_indexes = splitting[1]
@@ -506,7 +521,6 @@ def main():
     
     if torch.cuda.is_available() and args.use_gpu:
         model = torch.nn.DataParallel(model).cuda()
-        print("sto usando la GPU")
 
     ## optimizer
     # build optimizer

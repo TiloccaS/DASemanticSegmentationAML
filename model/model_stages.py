@@ -264,7 +264,7 @@ class BiSeNet(nn.Module):
             self_state_dict = self.state_dict()
             for k, v in state_dict.items():
                 self_state_dict.update({k: v})
-            print("sto usando la rete pre-trained: ",pretrain_model)
+            print("i'm using pre-trained net: ",pretrain_model)
             self.load_state_dict(self_state_dict)
     def get_params(self):
         wd_params, nowd_params, lr_mul_wd_params, lr_mul_nowd_params = [], [], [], []

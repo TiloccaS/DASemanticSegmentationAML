@@ -215,22 +215,21 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
     nni.report_final_result(max_miou)
 
 if __name__ == '__main__':
-    print("partito")
     parse = argparse.ArgumentParser()
     parse.add_argument('--root',
                        dest='root',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+                       default='../Datasets/Cityscapes',
     )
     parse.add_argument('--root_source',
                        dest='root_source',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+                       default='../Datasets/GTA5',
     )
     parse.add_argument('--root_target',
                        dest='root_target',
                        type=str,
-                       default='/mnt/d/Salvatore/Reboot/Universita/VANNO/AdvancedMachineLearning/ProjectAML/Cityscapes/Cityspaces',
+                       default='../Datasets/Cityscapes',
     )
     #parametro aggiunto per capire se vogliamo usare cityspaces o gta
     parse.add_argument('--dataset',
@@ -248,7 +247,7 @@ if __name__ == '__main__':
     parse.add_argument('--pretrain_path',
                       dest='pretrain_path',
                       type=str,
-                      default='',
+                      default='pretrained_models/STDCNet813M_73.91.tar',
     )
     parse.add_argument('--use_conv_last',
                        dest='use_conv_last',
@@ -330,6 +329,7 @@ if __name__ == '__main__':
 
     root = args.root
     aug_type = args.aug_type
+    #after each train you obtain the new hyperparameters
     params = nni.get_next_parameter()
 
     val_dataset = CityScapes(root=root,mode='val',height=args.crop_height,width=args.crop_width)
@@ -344,10 +344,7 @@ if __name__ == '__main__':
     
     if torch.cuda.is_available() and args.use_gpu:
         model = torch.nn.DataParallel(model).cuda()
-        print("sto usando la GPU")
-
     if args.domain_adaptation:
-        print(True)
         train_DA(args, model, dataloader_val, batch_size=params['batch-size'], learning_rate=params['learning_rate'],
                 learning_rate_D=params['learning_rate_D'], num_epochs=params['num_epochs'], lambda_adv_target1=params['lambda_adv_target1'],
                 weight_decay=params['weight_decay'])
