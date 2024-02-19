@@ -33,10 +33,10 @@ class FCDiscriminator(nn.Module):
 
 		return x
 
-class DepthWiseFCDiscriminator(nn.Module):
+class DepthWiseSepFCDiscriminator(nn.Module):
 
 	def __init__(self, num_classes, ndf = 64):
-		super(DepthWiseFCDiscriminator, self).__init__()
+		super(DepthWiseSepFCDiscriminator, self).__init__()
 
 		self.conv1_d = nn.Conv2d(num_classes, num_classes, kernel_size=4, stride=2, padding=1,groups=num_classes)
 		self.conv1_p = nn.Conv2d(num_classes, ndf, kernel_size=1, padding=1)
@@ -86,10 +86,10 @@ class DepthWiseFCDiscriminator(nn.Module):
 		return x
 
 
-class DepthWiseBNFCDiscriminator(nn.Module):
+class DepthWiseSepBNFCDiscriminator(nn.Module):
 
 	def __init__(self, num_classes, ndf = 64):
-		super(DepthWiseBNFCDiscriminator, self).__init__()
+		super(DepthWiseSepBNFCDiscriminator, self).__init__()
 
 		self.conv1_d = nn.Conv2d(num_classes, num_classes, kernel_size=4, stride=2, padding=1,groups=num_classes)
 		self.bn1_d=nn.BatchNorm2d(num_classes)

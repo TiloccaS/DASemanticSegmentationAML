@@ -3,7 +3,7 @@
 from model.model_stages import BiSeNet
 from dataset.cityscapes import CityScapes
 from dataset.GTAV import GtaV
-from model.discriminator import FCDiscriminator,DepthWiseBNFCDiscriminator,DepthWiseFCDiscriminator
+from model.discriminator import FCDiscriminator,DepthWiseSepBNFCDiscriminator,DepthWiseSepFCDiscriminator
 import torch
 from torch.utils.data import Subset,DataLoader
 import os
@@ -141,18 +141,18 @@ def train_DA(args, model, dataloader_val):
     lr=args.learning_rate
     lr_D1=args.learning_rate_D #by default is set to 1e-3 
 
-    #depthwise argument indicates the possibility of using the discriminator using depthwise convolution
+    #depthwise argument indicates the possibility of using the discriminator using depthwise-separable convolution
     if args.depthwise==False:
         model_D1=torch.nn.DataParallel(FCDiscriminator(num_classes=args.num_classes)).cuda()
     else:
         if args.batch_norm:
-            print("You are using depthwise discrminator with batch normalization...")
+            print("You are using depthwise separable convolution for the discrminator with batch normalization...")
 
-            model_D1=torch.nn.DataParallel(DepthWiseBNFCDiscriminator(num_classes=args.num_classes)).cuda()
+            model_D1=torch.nn.DataParallel(DepthWiseSepBNFCDiscriminator(num_classes=args.num_classes)).cuda()
         else: 
-            print("You are using depthwise discrminator...")
+            print("You are using depthwise separable convolution for the discrminator without batch normalization...")
 
-            model_D1=torch.nn.DataParallel(DepthWiseFCDiscriminator(num_classes=args.num_classes)).cuda()
+            model_D1=torch.nn.DataParallel(DepthWiseSepFCDiscriminator(num_classes=args.num_classes)).cuda()
     
         
     source_dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
