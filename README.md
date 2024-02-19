@@ -55,9 +55,16 @@ python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --r
 ### 4nd  IMPROVEMENTS
 
 #### A) Different and lighter discriminator function with Depth Wise Discriminator
+Without Batch Normalization: 
 
 ```
 python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './GTA5_model' --aug_type 'H-RP' --domain_adaptation True  --num_epochs 50 --batch_size 8 --num_workers 4 --depthwise True
+
+```
+With Batch Normalization: 
+
+```
+python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './GTA5_model' --aug_type 'H-RP' --domain_adaptation True  --num_epochs 50 --batch_size 8 --num_workers 4 --depthwise True --batch_norm True
 
 ```
 #### D) Hyper-parameter optimization to improve results
