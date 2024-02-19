@@ -20,32 +20,32 @@ pip install -r requirements.txt
 ## How to Use the Project:
 ### 2nd TESTING REAL-TIME SEMANTIC SEGMENTATION
 
-    ####  A) Defining the upper bound for the domain adaptation phase
-    ```
-    python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './Cityscapes_model  --num_epochs 50 --batch_size 8 --num_workers 4
-    
-    ```
-    ####  B)  Train on synthetic datasets
-    ```
-    python train.py --root <ROOT PATH GTAV> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --dataset GTAV --backbone 'STDCNet813' --save_model_path './GTA5_model' --num_epochs 50 --batch_size 8 --num_workers 4 
-    
-    ```
-    
-    #### C) Evaluate the domain shift.
-    Without Data Augmentation:
-    
-    
-    ```
-    python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/NoDA_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
-    
-    ```
-    
-    With Data Augmentation: 
-    
-    ```
-    python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/H-RP_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
-    
-    ```
+####  A) Defining the upper bound for the domain adaptation phase
+```
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './Cityscapes_model  --num_epochs 50 --batch_size 8 --num_workers 4
+
+```
+####  B)  Train on synthetic datasets
+```
+python train.py --root <ROOT PATH GTAV> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --dataset GTAV --backbone 'STDCNet813' --save_model_path './GTA5_model' --num_epochs 50 --batch_size 8 --num_workers 4 
+
+```
+
+#### C) Evaluate the domain shift.
+Without Data Augmentation:
+
+
+```
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/NoDA_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
+
+```
+
+With Data Augmentation: 
+
+```
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/H-RP_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
+
+```
 
 ### 3nd  IMPLEMENTING UNSUPERVISED ADVERSARIAL DOMAIN ADAPTATION
 ```
