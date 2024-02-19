@@ -475,7 +475,7 @@ def main():
                         num_workers=args.num_workers,
                         drop_last=True)
     else:
-        train_dataset = CityScapes('train', root,args.crop_height,args.crop_width)
+        train_dataset = CityScapes('train', root, args.crop_height, args.crop_width)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -483,7 +483,7 @@ def main():
                         pin_memory=False,
                         drop_last=True)
 
-        val_dataset = CityScapes(root=root,mode='val',height=args.crop_height,width=args.crop_width)
+        val_dataset = CityScapes(root=root,mode='val', height=args.crop_height, width=args.crop_width)
         dataloader_val = DataLoader(val_dataset,
                         batch_size=1,
                         shuffle=False,
