@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.nn import init
 import math
 
-
 class ConvX(nn.Module):
     def __init__(self, in_planes, out_planes, kernel=3, stride=1):
         super(ConvX, self).__init__()
@@ -14,7 +13,6 @@ class ConvX(nn.Module):
     def forward(self, x):
         out = self.relu(self.bn(self.conv(x)))
         return out
-
 
 class AddBottleneck(nn.Module):
     def __init__(self, in_planes, out_planes, block_num=3, stride=1):
@@ -65,7 +63,6 @@ class AddBottleneck(nn.Module):
 
         return torch.cat(out_list, dim=1) + x
 
-
 class CatBottleneck(nn.Module):
     def __init__(self, in_planes, out_planes, block_num=3, stride=1):
         super(CatBottleneck, self).__init__()
@@ -114,7 +111,6 @@ class CatBottleneck(nn.Module):
 
         out = torch.cat(out_list, dim=1)
         return out
-
 
 # STDC1Net
 class STDCNet813(nn.Module):
@@ -202,9 +198,7 @@ class STDCNet813(nn.Module):
         out = self.conv_last(out).pow(2)
         out = self.gap(out).flatten(1)
         out = self.fc(out)
-        # out = self.bn(out)
         out = self.relu(out)
-        # out = self.relu(self.bn(self.fc(out)))
         out = self.dropout(out)
         out = self.linear(out)
         return out

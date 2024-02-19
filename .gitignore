@@ -1,10 +1,4 @@
 my_env/
-my_env_temp/
-runs/
 __pycache__/
 model/__pycache__/
 dataset/__pycache__/
-my_env_temporaneo/
-__pycache__/
-dataset/__pycache__/
-model/__pycache__/

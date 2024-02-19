@@ -1,40 +1,35 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
-from torch.utils.data import Dataset
-from PIL import Image
 
 import os
 import os.path
-import sys
-import pandas as pd
-import torchvision
-from torchvision import transforms
-from torchvision.transforms import v2
-import torch
-import numpy as np
 import json
+import pandas as pd
+from PIL import Image
+from torchvision import transforms
+from torch.utils.data import Dataset
 from dataset.utils import pil_loader
-
 
 class GtaV(Dataset):
     
-    def __init__(self, root, aug_type,height,width):
+    def __init__(self, root, aug_type, height, width):
         super(GtaV, self).__init__()
-        # TODO
+
         self.root = os.path.normpath(root)
         images_paths = []
         labels_paths = []
-        self.resize=(height,width)
+        self.resize = (height, width)
         image_dir = os.path.join(self.root)
         self.root = os.path.normpath(image_dir)
-        #the classes of the gt images are 34, we need to pass from 34->19, so we need a mapping
+
+        #the classes of the gta images are 34, we need to pass from 34->19, so we need a mapping
         with open('./dataset/gta5_info.json', 'r') as fr:
             labels_info = json.load(fr)
         self.lb_map = {el['id']: el['trainId'] for el in labels_info}
        
-            
         normalizer = transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
 
+        ## Data Augmentation
         bright_t = transforms.ColorJitter(brightness=[1,2])
         contrast_t = transforms.ColorJitter(contrast = [2,5])
         saturation_t = transforms.ColorJitter(saturation = [1,3])
@@ -63,51 +58,42 @@ class GtaV(Dataset):
                     normalizer
             ])
 
-     
         self.to_tensor_label = transforms.Compose([
-
                     transforms.PILToTensor() 
                 ])
         
         image_files = os.listdir(os.path.normpath(os.path.join(self.root, 'images')))
-
         image_files.sort()
 
-        
         for img in image_files:
             images_paths.append(self.root+'/images/'+img)
         
         label_files = os.listdir(os.path.normpath(os.path.join(self.root, 'labels')))
-
-
         label_files.sort()
 
-   
         for lbl in label_files:
            labels_paths.append(self.root+'/labels/'+lbl)
            
-           
-        label_order=sorted(labels_paths)
-        image_order=sorted(images_paths)
+        label_order = sorted(labels_paths)
+        image_order = sorted(images_paths)
         self.data = pd.DataFrame(zip(image_order, label_order), columns=["image_path", "label_path"])
-
-
-
 
     def __getitem__(self, idx):
         image_path = self.data["image_path"].iloc[idx]
-        label_path=self.data["label_path"].iloc[idx]
-        image,label = pil_loader(image_path),Image.open(label_path)
-        image=image.resize(self.resize,Image.BILINEAR)
-        label=label.resize(self.resize,Image.NEAREST)
-        image=self.aug_pipeline(image)
-        label=self.to_tensor_label(label)
-        label=self.convert_labels(label)
+        label_path = self.data["label_path"].iloc[idx]
+        image,label = pil_loader(image_path), Image.open(label_path)
+        image = image.resize(self.resize, Image.BILINEAR)
+        label = label.resize(self.resize, Image.NEAREST)
+        image = self.aug_pipeline(image)
+        label = self.to_tensor_label(label)
+        label = self.convert_labels(label)
         return image, label   
 
     def __len__(self):
-        length = len(self.data) # Provide a way to get the length (number of elements) of the dataset
+        # Provide a way to get the length (number of elements) of the dataset
+        length = len(self.data) 
         return length
+    
     def convert_labels(self, label):
         for k, v in self.lb_map.items():
             label[label == k] = v

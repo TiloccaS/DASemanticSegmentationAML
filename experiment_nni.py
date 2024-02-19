@@ -1,49 +1,39 @@
 import nni
-from nni.experiment import Experiment
-import os
-import argparse
 import sys
+import argparse
+from nni.experiment import Experiment
+
 if __name__== "__main__":
     parse = argparse.ArgumentParser()
     parse.add_argument('--root',
                        dest='root',
                        type=str,
-                       default='../Datasets/Cityscapes',
-    )
+                       default='../Datasets/Cityscapes')
     parse.add_argument('--root_source',
                        dest='root_source',
                        type=str,
-                       default='../Datasets/GTA5',
-    )
+                       default='../Datasets/GTA5')
     parse.add_argument('--root_target',
                        dest='root_target',
                        type=str,
-                       default='../Datasets/Cityscapes',
-    )
-    #parametro aggiunto per capire se vogliamo usare cityspaces o gta
-    parse.add_argument('--dataset',
+                       default='../Datasets/Cityscapes')
+    parse.add_argument('--dataset',             ## parameter added to understand whether we want to use Cityscapes or GTA
                        dest='dataset',
                        type=str, 
                        default='Cityspaces',
-                       help='Select Dataset between GTAV and Cityspaces'
-    )
- 
+                       help='Select Dataset between GTAV and Cityspaces')
     parse.add_argument('--backbone',
                        dest='backbone',
                        type=str,
-                       default='CatmodelSmall',
-    )
+                       default='CatmodelSmall')
     parse.add_argument('--pretrain_path',
                       dest='pretrain_path',
                       type=str,
-                      default='',
-    )
+                      default='')
     parse.add_argument('--use_conv_last',
                        dest='use_conv_last',
                        type=bool,
-                       default=False,
-    )
-
+                       default=False)
     parse.add_argument('--epoch_start_i',
                        type=int,
                        default=0,
@@ -122,39 +112,40 @@ if __name__== "__main__":
         'lambda_adv_target1':{'_type': 'uniform', '_value': [1e-5, 1e-3]},
         'weight_decay':{'_type': 'uniform', '_value': [1e-5, 0.01]},
     }
+
     args = parse.parse_args()
     experiment = Experiment('local')
     experiment.config.search_space = search_space
-    #This simple annealing algorithm begins by sampling from the prior but tends over time to sample from points closer and closer to the best ones observed. 
-    #This algorithm is a simple variation on random search that leverages smoothness in the response surface. The annealing rate is not adaptive.
+
+    #This simple annealing algorithm begins by sampling from the prior 
+    #but tends over time to sample from points closer and closer to the best ones observed. 
+    #This algorithm is a simple variation on random search that leverages smoothness in the response surface. 
+    #The annealing rate is not adaptive.
     experiment.config.tuner.name = 'Anneal' 
+
     #we maximize beacause we use mIoU 
     experiment.config.tuner.class_args['optimize_mode'] = 'maximize'
+
     #file train_nni.py contain the training of domain adaptation using dynamic hyperparameters
-    experiment.config.trial_command = 'python train_nni.py --root ' +args.root+" --root_source "+args.root_source+\
-        " --root_target "+args.root_target +" --dataset "+args.dataset +" --backbone "+args.backbone+\
-        " --pretrain_path "+args.pretrain_path+" --use_conv_last "+str(args.use_conv_last)+" --epoch_start_i "+str(args.epoch_start_i)+\
-        " --checkpoint_step "+str(args.checkpoint_step)+" --validation_step "+str(args.validation_step)+" --crop_height "+str(args.crop_height)+" --crop_width "+str(args.crop_width)+\
-        " --num_workers "+str(args.num_workers)+" --num_classes "+str(args.num_classes)+" --cuda "+args.cuda + " --use_gpu "+str(args.use_gpu)+\
-        " --save_model_path "+args.save_model_path+" --optimizer "+args.optimizer+" --loss "+args.loss + " --iter_size "+str(args.iter_size)+\
-        " --domain_shift "+str(args.domain_shift)+" --domain_adaptation "+str(args.domain_adaptation)+" --momentum "+str(args.momentum) 
+    experiment.config.trial_command = 'python train_nni.py --root ' + args.root + " --root_source " + args.root_source+\
+        " --root_target " + args.root_target + " --dataset " + args.dataset + " --backbone " + args.backbone+\
+        " --pretrain_path " + args.pretrain_path + " --use_conv_last " + str(args.use_conv_last) + " --epoch_start_i " + str(args.epoch_start_i)+\
+        " --checkpoint_step " + str(args.checkpoint_step) + " --validation_step " + str(args.validation_step) + " --crop_height " + str(args.crop_height) + " --crop_width " + str(args.crop_width)+\
+        " --num_workers " + str(args.num_workers) + " --num_classes " + str(args.num_classes) + " --cuda " + args.cuda + " --use_gpu " + str(args.use_gpu)+\
+        " --save_model_path " + args.save_model_path + " --optimizer " + args.optimizer + " --loss " + args.loss + " --iter_size " + str(args.iter_size)+\
+        " --domain_shift " + str(args.domain_shift) + " --domain_adaptation " + str(args.domain_adaptation) + " --momentum " + str(args.momentum) 
         
     experiment.config.trial_code_directory = "./" 
-    #experiment.config.trial_gpu_number = 1
     experiment.config.tuner_gpu_indices = '0'
-
     experiment.config.experiment_working_directory="./nni_experiments_3" 
-
     experiment.config.max_trial_number = 10
     experiment.config.trial_concurrency = 1
-
     experiment.config.max_experiment_duration = '12h'
     
     #not always the port 8030 is available so we need to search it
     for port in range(8030,8090):
         try:
             print(port)
-
             experiment.run(port)
             sys.exit(0)
         except:

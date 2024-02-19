@@ -1,14 +1,10 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
-
 from .stdcnet import STDCNet813
-
 
 BatchNorm2d = nn.BatchNorm2d
 
@@ -21,7 +17,7 @@ class ConvBNReLU(nn.Module):
                               stride=stride,
                               padding=padding,
                               bias=False)
-        # self.bn = BatchNorm2d(out_chan)
+
         self.bn = BatchNorm2d(out_chan)
         self.relu = nn.ReLU()
         self.init_weight()
@@ -74,7 +70,6 @@ class AttentionRefinementModule(nn.Module):
         super(AttentionRefinementModule, self).__init__()
         self.conv = ConvBNReLU(in_chan, out_chan, ks=3, stride=1, padding=1)
         self.conv_atten = nn.Conv2d(out_chan, out_chan, kernel_size=1, bias=False)
-        # self.bn_atten = BatchNorm2d(out_chan)
         self.bn_atten = BatchNorm2d(out_chan)
 
         self.sigmoid_atten = nn.Sigmoid()
@@ -110,7 +105,6 @@ class ContextPath(nn.Module):
         self.conv_head16 = ConvBNReLU(128, 128, ks=3, stride=1, padding=1)
         self.conv_avg = ConvBNReLU(inplanes, 128, ks=1, stride=1, padding=0)
 
-     
         self.init_weight()
      
 
@@ -146,7 +140,6 @@ class ContextPath(nn.Module):
                 nn.init.kaiming_normal_(ly.weight, a=1)
                 if not ly.bias is None: nn.init.constant_(ly.bias, 0)
     
-
     def get_params(self):
         wd_params, nowd_params = [], []
         for name, module in self.named_modules():
@@ -214,7 +207,6 @@ class BiSeNet(nn.Module):
                  use_boundary_8=False, use_boundary_16=False, use_conv_last=False, heat_map=False, *args, **kwargs):
         super(BiSeNet, self).__init__()
 
-        # self.heat_map = heat_map
         self.cp = ContextPath(backbone, pretrain_model, use_conv_last=use_conv_last)
 
         conv_out_inplanes = 128
@@ -234,7 +226,6 @@ class BiSeNet(nn.Module):
         else:
             self.load_weight(pretrain_model)
 
-
     def forward(self, x):
         H, W = x.size()[2:]
 
@@ -252,13 +243,12 @@ class BiSeNet(nn.Module):
 
         return feat_out, feat_out16, feat_out32
     
-    
-
     def init_weight(self):
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
                 if not ly.bias is None: nn.init.constant_(ly.bias, 0)
+
     def load_weight(self, pretrain_model):            
             state_dict = torch.load(pretrain_model)
             self_state_dict = self.state_dict()
@@ -266,6 +256,7 @@ class BiSeNet(nn.Module):
                 self_state_dict.update({k: v})
             print("i'm using pre-trained net: ",pretrain_model)
             self.load_state_dict(self_state_dict)
+
     def get_params(self):
         wd_params, nowd_params, lr_mul_wd_params, lr_mul_nowd_params = [], [], [], []
         for name, child in self.named_children():

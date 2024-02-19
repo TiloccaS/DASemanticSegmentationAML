@@ -3,16 +3,11 @@ from torch.utils.data import DataLoader
 from model.model_stages import BiSeNet
 import argparse
 import numpy as np
-import pandas as pd
-import time
 from tensorboardX import SummaryWriter
 import torch
 import argparse
 import nni
 from nni.experiment import Experiment
-from torch import nn
-from torchvision import datasets
-from torchvision.transforms import ToTensor
 from dataset.cityscapes import CityScapes
 from dataset.GTAV import GtaV
 import torch.cuda.amp as amp
@@ -73,7 +68,7 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
     model_D1 = FCDiscriminator(num_classes=args.num_classes)
     model_D1=torch.nn.DataParallel(model_D1).cuda()
 
-    source_dataset = GtaV('train', args.root_source, args.aug_type,args.crop_height,args.crop_width)
+    source_dataset = GtaV('train', args.root_source, args.aug_type, args.crop_height, args.crop_width)
     dataloader_source = DataLoader(source_dataset,
                         batch_size=batch_size,
                         shuffle=True,
@@ -89,14 +84,9 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
                         pin_memory=False,
                         drop_last=True)
     
-   
-
     optimizer = torch.optim.SGD(model.parameters(),
                           lr=lr, momentum=args.momentum, weight_decay=weight_decay)
-
     optimizer_D1 = torch.optim.Adam(model_D1.parameters(), lr=lr_D1, betas=(0.9, 0.99))
-
-
     bce_loss = torch.nn.BCEWithLogitsLoss()
 
     # labels for adversarial training
@@ -104,9 +94,9 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
     target_label = 1
 
     for epoch in range(num_epochs):
-
         lr=poly_lr_scheduler(optimizer,lr,epoch,max_iter=num_epochs)
         lr_D1=poly_lr_scheduler(optimizer,lr_D1,epoch,max_iter=num_epochs)
+
         model.train()
         model_D1.train()
       
@@ -115,15 +105,11 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
         for i, (source_data, target_data) in enumerate(zip(dataloader_source,dataloader_target)):
 
             # train G
-
             # don't accumulate grads in D
             for param in model_D1.parameters():
                 param.requires_grad = False
 
-
-            # train with source
-
-            
+            # train with source            
             images, labels= source_data
             labels = labels[ :, :, :].long().cuda()
             images = images.cuda()
@@ -143,17 +129,16 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
             images, labels= target_data
             labels = labels[ :, :, :].long().cuda()
             images = images.cuda()
+
             with amp.autocast():
                 output_t, out16_t, out32_t = model(images)
-
                 D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,
                                         torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
-            
                 loss_D1=loss_adv_target1*lambda_adv_target1
+
             # proper normalization
             scaler.scale(loss_D1).backward()
-
 
             for param in model_D1.parameters():
                 param.requires_grad = True  
@@ -161,20 +146,16 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
             out32=out32.detach()
             out32_t=out32_t.detach() 
             
-
             with amp.autocast():
                 D_out1=model_D1(torch.nn.functional.softmax(out32,dim=1)) 
                 loss_adv_source1 = bce_loss(D_out1,
                                         torch.FloatTensor(D_out1.data.size()).fill_(source_label).cuda())
-                
             scaler.scale(loss_adv_source1).backward()
 
             with amp.autocast():
-
                 D_out1=model_D1(torch.nn.functional.softmax(out32_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,
                                         torch.FloatTensor(D_out1.data.size()).fill_(target_label).cuda())
-
             scaler.scale(loss_adv_target1).backward()
 
             scaler.step(optimizer)
@@ -201,7 +182,6 @@ def train_DA(args, model, dataloader_val, batch_size, learning_rate, learning_ra
             torch.save(model.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '.pth'))
             torch.save(model_D1.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '_D1.pth'))
             
-
         if epoch % args.validation_step == 0 and epoch != 0:
             precision, miou = val(args, model, dataloader_val)
             if miou > max_miou:
@@ -219,41 +199,32 @@ if __name__ == '__main__':
     parse.add_argument('--root',
                        dest='root',
                        type=str,
-                       default='../Datasets/Cityscapes',
-    )
+                       default='../Datasets/Cityscapes')
     parse.add_argument('--root_source',
                        dest='root_source',
                        type=str,
-                       default='../Datasets/GTA5',
-    )
+                       default='../Datasets/GTA5')
     parse.add_argument('--root_target',
                        dest='root_target',
                        type=str,
-                       default='../Datasets/Cityscapes',
-    )
-    #parametro aggiunto per capire se vogliamo usare cityspaces o gta
-    parse.add_argument('--dataset',
+                       default='../Datasets/Cityscapes')
+    parse.add_argument('--dataset',             ## parameter added to understand whether we want to use Cityscapes or GTA
                        dest='dataset',
                        type=str,
                        default='Cityspaces',
-                       help='Select Dataset between GTAV and Cityspaces'
-    )
- 
+                       help='Select Dataset between GTAV and Cityspaces')
     parse.add_argument('--backbone',
                        dest='backbone',
                        type=str,
-                       default='CatmodelSmall',
-    )
+                       default='CatmodelSmall')
     parse.add_argument('--pretrain_path',
                       dest='pretrain_path',
                       type=str,
-                      default='pretrained_models/STDCNet813M_73.91.tar',
-    )
+                      default='pretrained_models/STDCNet813M_73.91.tar')
     parse.add_argument('--use_conv_last',
                        dest='use_conv_last',
                        type=str2bool,
-                       default=False,
-    )
+                       default=False)
     parse.add_argument('--epoch_start_i',
                        type=int,
                        default=0,
@@ -324,11 +295,12 @@ if __name__ == '__main__':
                        help='type of Data Augmentation to apply')
     
     args = parse.parse_args()
+
     ## dataset
     n_classes = args.num_classes
-
     root = args.root
     aug_type = args.aug_type
+
     #after each train you obtain the new hyperparameters
     params = nni.get_next_parameter()
 
@@ -344,6 +316,7 @@ if __name__ == '__main__':
     
     if torch.cuda.is_available() and args.use_gpu:
         model = torch.nn.DataParallel(model).cuda()
+        
     if args.domain_adaptation:
         train_DA(args, model, dataloader_val, batch_size=params['batch-size'], learning_rate=params['learning_rate'],
                 learning_rate_D=params['learning_rate_D'], num_epochs=params['num_epochs'], lambda_adv_target1=params['lambda_adv_target1'],

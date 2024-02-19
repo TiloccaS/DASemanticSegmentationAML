@@ -1,9 +1,10 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
+
 from model.model_stages import BiSeNet
 from dataset.cityscapes import CityScapes
 from dataset.GTAV import GtaV
-from model.discriminator import FCDiscriminator,DepthWiseSepBNFCDiscriminator,DepthWiseSepFCDiscriminator
+from model.discriminator import FCDiscriminator, DepthWiseSepBNFCDiscriminator, DepthWiseSepFCDiscriminator
 import torch
 from torch.utils.data import Subset,DataLoader
 import os
@@ -17,8 +18,8 @@ from utils import poly_lr_scheduler
 from utils import reverse_one_hot, compute_global_accuracy, fast_hist, per_class_iu
 from tqdm.auto import tqdm
 from sklearn.model_selection import train_test_split
-logger = logging.getLogger()
 
+logger = logging.getLogger()
 
 def val(args, model, dataloader):
     print('start val!')
@@ -59,20 +60,19 @@ def val(args, model, dataloader):
 
         return precision, miou
 
-
 def train(args, model, optimizer, dataloader_train, dataloader_val):
     writer = SummaryWriter(comment=''.format(args.optimizer))
-
     scaler = amp.GradScaler()
-
     loss_func = torch.nn.CrossEntropyLoss(ignore_index=255)
     max_miou = 0
     step = 0
+
     for epoch in range(args.num_epochs):
         lr = poly_lr_scheduler(optimizer, args.learning_rate, iter=epoch, max_iter=args.num_epochs)
         model.train()
-        tq = tqdm(total=len(dataloader_train)* args.batch_size )
+        tq = tqdm(total=len(dataloader_train) * args.batch_size )
         tq.set_description('epoch %d, lr %f' % (epoch, lr))
+
         loss_record = []
         for i, (data, label) in enumerate(dataloader_train):
             data = data.cuda()
@@ -98,9 +98,11 @@ def train(args, model, optimizer, dataloader_train, dataloader_val):
             writer.add_scalar('loss_step', loss, step)
             loss_record.append(loss.item())
         tq.close()
+
         loss_train_mean = np.mean(loss_record)
         writer.add_scalar('epoch/loss_epoch_train', float(loss_train_mean), epoch)
         print('loss for train : %f' % (loss_train_mean))
+
         if epoch % args.checkpoint_step == 0 and epoch != 0:
             import os
             if not os.path.isdir(args.save_model_path):
@@ -117,13 +119,11 @@ def train(args, model, optimizer, dataloader_train, dataloader_val):
             writer.add_scalar('epoch/precision_val', precision, epoch)
             writer.add_scalar('epoch/miou val', miou, epoch)
 
-
 def adjust_learning_rate(args, optimizer, iter):
     lr = poly_lr_scheduler(optimizer, args.learning_rate, iter)
     optimizer.param_groups[0]['lr'] = lr
     if len(optimizer.param_groups) > 1:
         optimizer.param_groups[1]['lr'] = lr * 10
-
 
 def adjust_learning_rate_D(args, optimizer, iter):
     lr = poly_lr_scheduler(optimizer, args.learning_rate_D, iter)
@@ -135,28 +135,23 @@ def train_DA(args, model, dataloader_val):
     loss_func = torch.nn.CrossEntropyLoss(ignore_index=255)
     writer = SummaryWriter(comment=''.format(args.optimizer))
     scaler = amp.GradScaler()
-
     max_miou = 0
     step = 0
-    lr=args.learning_rate
-    lr_D1=args.learning_rate_D #by default is set to 1e-3 
+    lr = args.learning_rate
+    lr_D1 = args.learning_rate_D      ## by default is set to 1e-3 
 
-    #depthwise argument indicates the possibility of using the discriminator using depthwise-separable convolution
-    if args.depthwise==False:
-        model_D1=torch.nn.DataParallel(FCDiscriminator(num_classes=args.num_classes)).cuda()
+    ## depthwise argument indicates the possibility of using the discriminator using depthwise-separable convolution
+    if args.depthwise == False:
+        model_D1 = torch.nn.DataParallel(FCDiscriminator(num_classes=args.num_classes)).cuda()
     else:
         if args.batch_norm:
             print("You are using depthwise separable convolution for the discrminator with batch normalization...")
-
             model_D1=torch.nn.DataParallel(DepthWiseSepBNFCDiscriminator(num_classes=args.num_classes)).cuda()
         else: 
             print("You are using depthwise separable convolution for the discrminator without batch normalization...")
-
             model_D1=torch.nn.DataParallel(DepthWiseSepFCDiscriminator(num_classes=args.num_classes)).cuda()
     
-        
-    source_dataset = GtaV(args.root_source, args.aug_type,args.crop_height,args.crop_width)
-
+    source_dataset = GtaV(args.root_source, args.aug_type, args.crop_height, args.crop_width)
     dataloader_source = DataLoader(source_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -164,7 +159,7 @@ def train_DA(args, model, dataloader_val):
                         pin_memory=False,
                         drop_last=True)
     
-    target_dataset = CityScapes('train', args.root_target,args.crop_height,args.crop_width)
+    target_dataset = CityScapes('train', args.root_target, args.crop_height, args.crop_width)
     dataloader_target = DataLoader(target_dataset,
                         batch_size=args.batch_size,
                         shuffle=True,
@@ -172,18 +167,12 @@ def train_DA(args, model, dataloader_val):
                         pin_memory=False,
                         drop_last=True)
     
-   
-
     optimizer = torch.optim.SGD(model.parameters(),
                           lr=lr, momentum=args.momentum, weight_decay=args.weight_decay)
-
     optimizer_D1 = torch.optim.Adam(model_D1.parameters(), lr=lr_D1, betas=(0.9, 0.99))
-
-
     bce_loss = torch.nn.BCEWithLogitsLoss()
 
     # labels for adversarial training
-    
     for epoch in range(args.num_epochs):
         #the discriminator loss is based on identifying the right domain of origin of the labels produced by semantic segmentation
         #we use torch.zeros for source data (GTAV)
@@ -195,23 +184,21 @@ def train_DA(args, model, dataloader_val):
         #poly_lr_scheduler is used to change dynamically the lr at each epoch
         lr = poly_lr_scheduler(optimizer, lr, epoch, max_iter=args.num_epochs)
         lr_D1 = poly_lr_scheduler(optimizer_D1, lr_D1, epoch, max_iter=args.num_epochs)
-        tq = tqdm(total=min(len(dataloader_source),len(dataloader_target))* args.batch_size )
+        tq = tqdm(total=min(len(dataloader_source), len(dataloader_target)) * args.batch_size )
         tq.set_description('epoch %d, lr_segmentation %f, lr_discriminator %f'% (epoch, lr, lr_D1))
+
         loss_record=[]
         loss_record_D=[]
         for i, (source_data, target_data) in enumerate(zip(dataloader_source,dataloader_target)):
-
-
-            
             images, labels= source_data
             labels = labels[ :, :, :].long().cuda()
             images = images.cuda()
-            images_t, _= target_data
+            images_t, _ = target_data
             images_t = images_t.cuda()
+
             #reset the gradients
             optimizer.zero_grad()
             optimizer_D1.zero_grad()
-
 
             model.train()
             model_D1.train()
@@ -220,9 +207,7 @@ def train_DA(args, model, dataloader_val):
             for param in model_D1.parameters():
                 param.requires_grad = False
 
-
             #TRAIN GENERATOR
-
             with amp.autocast():
                 output, out16, out32 = model(images)
 
@@ -235,12 +220,11 @@ def train_DA(args, model, dataloader_val):
             scaler.step(optimizer)
             scaler.update()
 
-            
             with amp.autocast():
                 output_t, out16_t, out32_t = model(images_t)
 
-
             optimizer.zero_grad()
+
             with amp.autocast():
                 #we want a segmentation able to produce target label that are similar to source label 
                 D_out1=model_D1(torch.nn.functional.softmax(output_t,dim=1)) 
@@ -252,9 +236,7 @@ def train_DA(args, model, dataloader_val):
             scaler.step(optimizer)
             scaler.update()
 
-
             #TRAIN DISCRIMINATOR
-
             for param in model_D1.parameters():
                 param.requires_grad = True  
             
@@ -262,7 +244,6 @@ def train_DA(args, model, dataloader_val):
             output_t=output_t.detach() 
             
             #it should be able to recognize when a label comes from source or comes from target
-
             with amp.autocast():
                 D_out1=model_D1(torch.nn.functional.softmax(output,dim=1)) 
                 loss_adv_source1 = bce_loss(D_out1,
@@ -273,7 +254,6 @@ def train_DA(args, model, dataloader_val):
             scaler.update()
 
             with amp.autocast():
-
                 D_out1=model_D1(torch.nn.functional.softmax(output_t,dim=1)) 
                 loss_adv_target1 = bce_loss(D_out1,target_label(D_out1.size(0),1,D_out1.size(2),D_out1.size(3)).cuda())    
             optimizer_D1.zero_grad()
@@ -302,7 +282,6 @@ def train_DA(args, model, dataloader_val):
             torch.save(model.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '.pth'))
             torch.save(model_D1.state_dict(), os.path.join(args.save_model_path, 'GTA5_' + str(args.checkpoint_step) + '_D1.pth'))
             
-
         if epoch % args.validation_step == 0 and epoch != 0:
             precision, miou = val(args, model, dataloader_val)
             if miou > max_miou:
@@ -314,12 +293,10 @@ def train_DA(args, model, dataloader_val):
             writer.add_scalar('epoch/miou val', miou, epoch)
 
     #to understand the importance of how much the discrminator has been made lighter we print the number of parameters
-
     total_params = sum(
 	param.numel() for param in model_D1.parameters()
     )
     print("The discriminator has: ",total_params)
-
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -329,10 +306,8 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Unsupported value encountered.')
 
-
 def parse_args():
     parse = argparse.ArgumentParser()
-    
     
     parse.add_argument('--root',
                        dest='root',
@@ -346,8 +321,7 @@ def parse_args():
                        dest='root_target',
                        type=str,
                        default='../Datasets/Cityscapes')
-    #parametro aggiunto per capire se vogliamo usare cityspaces o gta
-    parse.add_argument('--dataset',
+    parse.add_argument('--dataset',         ## parameter added to understand whether we want to use Cityscapes or GTA
                        dest='dataset',
                        type=str,
                        default='Cityspaces',
@@ -461,23 +435,25 @@ def parse_args():
     parse.add_argument('--batch_norm',
                        type=bool,
                        default=False)
+    
     return parse.parse_args()
-
 
 def main():
     args = parse_args()
 
     ## dataset
     n_classes = args.num_classes
-
     root = args.root
-    #we implemented different trasformation for data augmentation, this parameter is used to specify what type of trasformations are required
+
+    #we implemented different trasformation for data augmentation, 
+    #this parameter is used to specify what type of trasformations are required
     #by default is None 
     aug_type = args.aug_type 
-    if args.dataset == 'GTAV':
-        dataset = GtaV( root, aug_type,args.crop_height,args.crop_width)
 
+    if args.dataset == 'GTAV':
+        dataset = GtaV( root, aug_type, args.crop_height, args.crop_width)
         indexes = range(0, len(dataset))
+
         #funciton used to split train and test 
         splitting = train_test_split(indexes, train_size = 0.75, random_state = 42, shuffle = True)
         train_indexes = splitting[0]
@@ -499,8 +475,6 @@ def main():
                         num_workers=args.num_workers,
                         drop_last=True)
     else:
-
-
         train_dataset = CityScapes('train', root,args.crop_height,args.crop_width)
         dataloader_train = DataLoader(train_dataset,
                         batch_size=args.batch_size,
@@ -543,7 +517,6 @@ def main():
     
     # final test
     val(args, model, dataloader_val)
-
 
 if __name__ == "__main__":
     import multiprocessing
