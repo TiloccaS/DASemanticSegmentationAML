@@ -28,7 +28,7 @@ python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_mode
 ```
 ####  B)  Train on synthetic datasets
 ```
-python train.py --root <ROOT PATH GTAV> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --dataset GTAV --backbone 'STDCNet813' --save_model_path './GTA5_model  --num_epochs 50 --batch_size 8 --num_workers 4 
+python train.py --root <ROOT PATH GTAV> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --dataset GTAV --backbone 'STDCNet813' --save_model_path './GTA5_model' --num_epochs 50 --batch_size 8 --num_workers 4 
 
 ```
 
@@ -37,21 +37,20 @@ Without Data Augmentation:
 
 
 ```
-python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/NoDA_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model --domain_shift True
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/NoDA_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
 
 ```
 
 With Data Augmentation: 
 
 ```
-python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/H-RP_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model --domain_shift True
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './GTA5_model/H-RP_best.pth' --backbone 'STDCNet813' --save_model_path './GTA5_model' --domain_shift True
 
 ```
 
 ### 3nd  IMPLEMENTING UNSUPERVISED ADVERSARIAL DOMAIN ADAPTATION
 ```
-python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813'
---save_model_path './GTA5_model' --aug_type 'H-RP' --domain_adaptation True  --num_epochs 50 --batch_size 8 --num_workers 4 
+python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './GTA5_model' --aug_type 'H-RP' --domain_adaptation True  --num_epochs 50 --batch_size 8 --num_workers 4 
 
 ```
 ### 4nd  IMPROVEMENTS
@@ -59,14 +58,12 @@ python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --r
 #### A) Different and lighter discriminator function with Depth Wise Discriminator
 
 ```
-python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813'
---save_model_path './GTA5_model' --aug_type 'H-RP' --domain_adaptation True  --num_epochs 50 --batch_size 8 --num_workers 4 --depthwise True
+python train.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './GTA5_model' --aug_type 'H-RP' --domain_adaptation True  --num_epochs 50 --batch_size 8 --num_workers 4 --depthwise True
 
 ```
 #### D) Hyper-parameter optimization to improve results
 ```
-python experiment_nni.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813'
---save_model_path './GTA5_model_nni' --aug_type 'H-RP' --domain_adaptation True  --optimizer 'sgd'
+python experiment_nni.py --root <ROOT PATH CITYSCAPES> --root_source <ROOT PATH GTAV> --root_target <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './GTA5_model_nni' --aug_type 'H-RP' --domain_adaptation True  --optimizer 'sgd'
 
 ```
 
