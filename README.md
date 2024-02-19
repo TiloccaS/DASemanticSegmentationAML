@@ -22,12 +22,12 @@ pip install -r requirements.txt
 
 ####  A) Defining the upper bound for the domain adaptation phase
 ```
-python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './Cityscapes_model  --num_epochs 50 --batch_size 8 --num_workers 4
+python train.py --root <ROOT PATH CITYSCAPES> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --backbone 'STDCNet813' --save_model_path './Cityscapes_model'  --num_epochs 50 --batch_size 8 --num_workers 4
 
 ```
 ####  B)  Train on synthetic datasets
 ```
-python train.py --root <ROOT PATH GTAV> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --dataset GTAV --backbone 'STDCNet813' --save_model_path './GTA5_model' --num_epochs 50 --batch_size 8 --num_workers 4 
+python train.py --root <ROOT PATH GTAV> --pretrain_path './pretrained_models/STDCNet813M_73.91.tar' --dataset 'GTAV' --backbone 'STDCNet813' --save_model_path './GTA5_model' --num_epochs 50 --batch_size 8 --num_workers 4 
 
 ```
 
